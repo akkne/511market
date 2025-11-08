@@ -11,11 +11,11 @@ public class ListingEntityTypeConfiguration : IEntityTypeConfiguration<Listing>
     {
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        
+
         builder.HasMany(x => x.Photos)
                .WithOne(x => x.Listing)
                .OnDelete(DeleteBehavior.Cascade);
-        
+
         builder.Property(x => x.Status)
                .HasConversion(
                     x => x.ToString(),
@@ -26,7 +26,7 @@ public class ListingEntityTypeConfiguration : IEntityTypeConfiguration<Listing>
         builder.HasOne(x => x.Category)
                .WithMany(x => x.Listings)
                .OnDelete(DeleteBehavior.Cascade);
-        
+
         builder.Property(x => x.Title).IsRequired();
         builder.Property(x => x.Description).IsRequired();
     }

@@ -9,11 +9,11 @@ public class FavoriteEntityTypeConfiguration : IEntityTypeConfiguration<Favorite
     public void Configure(EntityTypeBuilder<Favorite> builder)
     {
         builder.HasOne(f => f.BuyerProfile)
-               .WithMany(bp => bp.Favorites)          
+               .WithMany(bp => bp.Favorites)
                .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(f => f.Listing)
-               .WithMany(l => l.FavoritedBy)        
+               .WithMany(l => l.FavoritedBy)
                .OnDelete(DeleteBehavior.Cascade);
     }
 }

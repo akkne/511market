@@ -6,7 +6,8 @@ using global::Telegram.Bot.Types;
 
 public class TextRouterService : ITextRouterService
 {
-    public async Task HandleStateAsync(Message message, ITelegramBotClient botClient, CancellationToken cancellationToken)
+    public async Task HandleStateAsync(Message message, ITelegramBotClient botClient,
+                                       CancellationToken cancellationToken)
     {
         throw new NotImplementedException();
     }

@@ -4,7 +4,7 @@ using Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-public class SellerProfileEntityTypeConfiguration :  IEntityTypeConfiguration<SellerProfile>
+public class SellerProfileEntityTypeConfiguration : IEntityTypeConfiguration<SellerProfile>
 {
     public void Configure(EntityTypeBuilder<SellerProfile> builder)
     {
@@ -14,7 +14,7 @@ public class SellerProfileEntityTypeConfiguration :  IEntityTypeConfiguration<Se
         builder.HasOne(x => x.UserProfile)
                .WithOne(x => x.SellerProfile)
                .OnDelete(DeleteBehavior.Cascade);
-        
+
         builder.HasMany(x => x.Listings)
                .WithOne(x => x.SellerProfile)
                .OnDelete(DeleteBehavior.Cascade);

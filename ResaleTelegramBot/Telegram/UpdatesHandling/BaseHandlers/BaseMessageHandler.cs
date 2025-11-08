@@ -49,10 +49,7 @@ public class BaseUpdatesHandler : IUpdateHandler
             "Received message: {text} from user with username: {username} with id: {id}",
             message.Text, message.From!.Username, message.From.Id);
 
-        if (message.Text!.StartsWith('/'))
-        {
-            await OnCommandAsync(botClient, message, cancellationToken);
-        }
+        if (message.Text!.StartsWith('/')) await OnCommandAsync(botClient, message, cancellationToken);
     }
 
     private async Task OnCommandAsync(ITelegramBotClient botClient, Message message,

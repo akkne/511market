@@ -10,7 +10,7 @@ public class CategoryEntityTypeConfiguration : IEntityTypeConfiguration<Category
     {
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
-        
+
         builder.Property(x => x.Name).IsRequired();
     }
 }

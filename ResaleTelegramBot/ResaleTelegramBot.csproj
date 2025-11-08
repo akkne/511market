@@ -7,18 +7,18 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <Folder Include="Helpers\" />
-      <Folder Include="Services\Abstract\" />
-      <Folder Include="Services\Contracts\" />
-      <Folder Include="Services\Implementation\" />
-      <Folder Include="Telegram\Helpers\" />
-      <Folder Include="Telegram\UpdatesHandling\Handlers\" />
+        <Folder Include="Helpers\"/>
+        <Folder Include="Services\Abstract\"/>
+        <Folder Include="Services\Contracts\"/>
+        <Folder Include="Services\Implementation\"/>
+        <Folder Include="Telegram\Helpers\"/>
+        <Folder Include="Telegram\UpdatesHandling\Handlers\"/>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10" />
-      <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
-      <PackageReference Include="Telegram.Bot" Version="22.7.5" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.10"/>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4"/>
+        <PackageReference Include="Telegram.Bot" Version="22.7.5"/>
     </ItemGroup>
 
 </Project>

@@ -47,7 +47,7 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.Configure<TelegramConfigurationOptions>(
         configuration.GetSection(TelegramConfigurationOptions.SectionName));
 
-    
+
     services.AddHttpClient(nameof(TelegramBotClient))
             .AddTypedClient<ITelegramBotClient>((client, provider) =>
              {
@@ -59,7 +59,7 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
              });
 
     services.AddScoped<IUpdateHandler, BaseUpdatesHandler>();
-    
+
     services.AddSingleton<IWebhookConfigurationService, WebhookConfigurationService>();
     services.AddHostedService<WebhookReceiverService>();
 
