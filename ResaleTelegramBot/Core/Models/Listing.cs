@@ -12,4 +12,5 @@ public class Listing
     public ListingStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
     public List<Favorite> FavoritedBy { get; set; }
+    public List<ListingPhoto> Photos { get; set; }
 }
