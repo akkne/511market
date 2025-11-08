@@ -12,7 +12,6 @@
         <Folder Include="Services\Contracts\"/>
         <Folder Include="Services\Implementation\"/>
         <Folder Include="Telegram\Helpers\"/>
-        <Folder Include="Telegram\UpdatesHandling\Handlers\"/>
     </ItemGroup>
 
     <ItemGroup>

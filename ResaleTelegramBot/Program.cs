@@ -4,6 +4,8 @@ using ResaleTelegramBot.Persistence.DbContexts;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Abstract;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Implementation;
+using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Command.Abstract;
+using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Command.Implementation;
 using ResaleTelegramBot.Telegram.Webhooks.Configuration;
 using ResaleTelegramBot.Telegram.Webhooks.Endpoints;
 using ResaleTelegramBot.Telegram.Webhooks.Services.Abstract;
@@ -66,4 +68,6 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.AddScoped<ICallbackRouterService, CallbackRouterService>();
     services.AddScoped<ICommandRouterService, CommandRouterService>();
     services.AddScoped<ITextRouterService, TextRouterService>();
+
+    services.AddScoped<ICommandHandler, StartCommandHandler>();
 }
