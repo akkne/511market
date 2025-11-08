@@ -406,6 +406,6 @@ FodyWeavers.xsd
 # JetBrains Rider
 *.sln.iml
 
+docker-compose.*.yml
 appsettings.*.json
-*/docker-compose.yml
 launchSettings.json

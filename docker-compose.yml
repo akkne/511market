@@ -1,0 +1,17 @@
+﻿services:
+  resaletelegrambot:
+    image: resaletelegrambot
+    build:
+      context: .
+      dockerfile: ResaleTelegramBot/Dockerfile
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=ResaleBot
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - ./.containers/database:/var/lib/postgresql/data
