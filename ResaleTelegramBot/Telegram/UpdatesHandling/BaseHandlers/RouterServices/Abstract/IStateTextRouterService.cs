@@ -3,7 +3,7 @@ namespace ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices
 using global::Telegram.Bot;
 using global::Telegram.Bot.Types;
 
-public interface ITextRouterService
+public interface IStateTextRouterService
 {
     Task HandleStateAsync(Message message, ITelegramBotClient botClient,
                           CancellationToken cancellationToken);

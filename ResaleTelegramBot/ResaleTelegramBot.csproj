@@ -13,6 +13,9 @@
         <Folder Include="Services\Contracts\"/>
         <Folder Include="Services\Implementation\"/>
         <Folder Include="Telegram\Helpers\"/>
+        <Folder Include="Telegram\UpdatesHandling\Handlers\Callback\Implementation\"/>
+        <Folder Include="Telegram\UpdatesHandling\Handlers\RegularText\Implementation\"/>
+        <Folder Include="Telegram\UpdatesHandling\Handlers\StateText\Implementation\"/>
     </ItemGroup>
 
     <ItemGroup>
@@ -22,9 +25,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Content Include="..\.dockerignore">
-        <Link>.dockerignore</Link>
-      </Content>
+        <Content Include="..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
     </ItemGroup>
 
 </Project>
