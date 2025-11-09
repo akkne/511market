@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ResaleTelegramBot.Persistence.DbContexts;
+using ResaleTelegramBot.Services.Abstract;
+using ResaleTelegramBot.Services.Implementation;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Abstract;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Implementation;
@@ -37,6 +39,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
         options.UseNpgsql(connectionString)
                .EnableSensitiveDataLogging();
     });
+
+    services.AddScoped<IAuthService, AuthService>();
 
     ConfigureTelegramServices(services, configuration);
 }
