@@ -14,8 +14,13 @@ public class RegularTextRouterService : IRegularTextRouterService
         _handlers = handlers;
     }
 
-    public async Task HandleStateAsync(Message message, ITelegramBotClient botClient,
-                                       CancellationToken cancellationToken)
+    public bool CanHandle(string message)
+    {
+        return _handlers.Any(h => h.CanHandle(message));
+    }
+
+    public async Task HandleRegularTextAsync(Message message, ITelegramBotClient botClient,
+                                             CancellationToken cancellationToken)
     {
         IRegularTextHandler? handler = _handlers.FirstOrDefault(h => h.CanHandle(message.Text ?? string.Empty));
         if (handler == null) throw new InvalidOperationException("Handler not found");

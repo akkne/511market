@@ -5,6 +5,8 @@ using global::Telegram.Bot.Types;
 
 public interface IRegularTextRouterService
 {
-    Task HandleStateAsync(Message message, ITelegramBotClient botClient,
-                          CancellationToken cancellationToken);
+    bool CanHandle(string message);
+
+    Task HandleRegularTextAsync(Message message, ITelegramBotClient botClient,
+                                CancellationToken cancellationToken);
 }
