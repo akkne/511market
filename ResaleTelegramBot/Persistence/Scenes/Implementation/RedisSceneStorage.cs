@@ -2,27 +2,26 @@ namespace ResaleTelegramBot.Persistence.Scenes.Implementation;
 
 using System.Text.Json;
 using Abstract;
+using Microsoft.Extensions.Options;
+using Options;
 using StackExchange.Redis;
 using Telegram.Scenes.Contexts.Abstract;
 
 public class RedisSceneStorage : ISceneStorage
 {
-    private readonly JsonSerializerOptions _json;
+    private readonly JsonSerializerOptions _jsonSerializerOptions;
     private readonly ILogger<RedisSceneStorage> _logger;
     private readonly IDatabase _redisDatabase;
-    private readonly TimeSpan? _ttl;
+    private readonly RedisSceneStorageConfiguration _redisSceneStorageConfiguration;
 
     public RedisSceneStorage(
         ILogger<RedisSceneStorage> logger,
-        IConnectionMultiplexer redis,
-        JsonSerializerOptions? jsonOptions = null,
-        TimeSpan? defaultTtl = null,
-        int databaseIndex = -1)
+        IConnectionMultiplexer redis, IOptions<RedisSceneStorageConfiguration> redisSceneStorageConfiguration)
     {
         _logger = logger;
-        _redisDatabase = redis.GetDatabase(databaseIndex);
-        _json = jsonOptions ?? new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-        _ttl = defaultTtl;
+        _redisSceneStorageConfiguration = redisSceneStorageConfiguration.Value;
+        _redisDatabase = redis.GetDatabase(_redisSceneStorageConfiguration.DatabaseIndex);
+        _jsonSerializerOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     }
 
     public async Task<TContext?> GetSceneContextAsync<TContext>(long userId, string sceneName,
@@ -35,7 +34,7 @@ public class RedisSceneStorage : ISceneStorage
 
         try
         {
-            TContext? context = JsonSerializer.Deserialize<TContext>(value!, _json);
+            TContext? context = JsonSerializer.Deserialize<TContext>(value!, _jsonSerializerOptions);
             return context;
         }
         catch (Exception exception)
@@ -73,17 +72,17 @@ public class RedisSceneStorage : ISceneStorage
     {
         context.UpdatedAt = DateTime.UtcNow;
 
-        string json = JsonSerializer.Serialize(context, _json);
+        string json = JsonSerializer.Serialize(context, _jsonSerializerOptions);
         RedisKey key = GetContextKey(userId, sceneName);
         RedisKey indexKey = GetIndexKey(userId);
 
         ITransaction transaction = _redisDatabase.CreateTransaction();
 
-        _ = transaction.StringSetAsync(key, json);
-        if (_ttl.HasValue) _ = transaction.KeyExpireAsync(key, _ttl);
+        await transaction.StringSetAsync(key, json);
+        await transaction.KeyExpireAsync(key, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
 
-        _ = transaction.SetAddAsync(indexKey, sceneName);
-        if (_ttl.HasValue) _ = transaction.KeyExpireAsync(indexKey, _ttl);
+        await transaction.SetAddAsync(indexKey, sceneName);
+        await transaction.KeyExpireAsync(indexKey, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
 
         bool ok = await transaction.ExecuteAsync().ConfigureAwait(false);
         if (!ok)
@@ -97,8 +96,8 @@ public class RedisSceneStorage : ISceneStorage
         RedisKey indexKey = GetIndexKey(userId);
 
         ITransaction transaction = _redisDatabase.CreateTransaction();
-        _ = transaction.KeyDeleteAsync(key);
-        _ = transaction.SetRemoveAsync(indexKey, sceneName);
+        await transaction.KeyDeleteAsync(key);
+        await transaction.SetRemoveAsync(indexKey, sceneName);
 
         bool ok = await transaction.ExecuteAsync().ConfigureAwait(false);
         if (!ok)
@@ -133,14 +132,8 @@ public class RedisSceneStorage : ISceneStorage
 
     public async Task SetActiveSceneAsync(long userId, string sceneName, CancellationToken cancellationToken)
     {
-        RedisKey key = GetActiveKey(userId);
-        if (_ttl.HasValue)
-        {
-            await _redisDatabase.StringSetAsync(key, sceneName, _ttl).ConfigureAwait(false);
-            return;
-        }
-
-        await _redisDatabase.StringSetAsync(key, sceneName).ConfigureAwait(false);
+        await _redisDatabase.StringSetAsync(GetActiveKey(userId), sceneName,
+            TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds)).ConfigureAwait(false);
     }
 
     private static RedisKey GetContextKey(long userId, string sceneName)

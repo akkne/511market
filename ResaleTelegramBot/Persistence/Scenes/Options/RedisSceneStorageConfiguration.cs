@@ -7,4 +7,5 @@ public class RedisSceneStorageConfiguration
     public string ConnectionString { get; set; } = null!;
     public int TtlSeconds { get; set; }
     public bool AbortOnConnectFail { get; set; }
+    public int DatabaseIndex { get; set; }
 }
