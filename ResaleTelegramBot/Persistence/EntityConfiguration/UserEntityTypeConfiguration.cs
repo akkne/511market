@@ -11,9 +11,6 @@ public class UserEntityTypeConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).ValueGeneratedNever();
 
-        builder.OwnsOne(x => x.TelegramData, data =>
-        {
-            data.Property(x => x.Id).IsRequired();
-        });
+        builder.OwnsOne(x => x.TelegramData, data => { data.Property(x => x.Id).IsRequired(); });
     }
 }

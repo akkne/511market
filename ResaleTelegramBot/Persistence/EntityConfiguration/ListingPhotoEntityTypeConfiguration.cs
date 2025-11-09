@@ -12,7 +12,7 @@ public class ListingPhotoEntityTypeConfiguration : IEntityTypeConfiguration<List
         builder.Property(x => x.Id).ValueGeneratedNever();
 
         builder.Property(x => x.TelegramFileId).IsRequired();
-        
+
         builder.Property(x => x.Order).IsRequired();
     }
 }
