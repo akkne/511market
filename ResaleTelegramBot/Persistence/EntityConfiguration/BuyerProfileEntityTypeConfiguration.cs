@@ -8,10 +8,12 @@ public class BuyerProfileEntityTypeConfiguration : IEntityTypeConfiguration<Buye
 {
     public void Configure(EntityTypeBuilder<BuyerProfile> builder)
     {
-        builder.HasKey(x => x.Id);
-        builder.Property(x => x.Id).ValueGeneratedNever();
-
         builder.HasOne(x => x.UserProfile)
-               .WithOne(x => x.BuyerProfile);
+               .WithOne(x => x.BuyerProfile)
+               .HasForeignKey<BuyerProfile>(x => x.UserProfile)
+               .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Property(x => x.UserProfileId)
+               .IsRequired();
     }
 }
