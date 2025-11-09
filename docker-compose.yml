@@ -20,4 +20,4 @@
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
     volumes:
-      - ./.containers/database:/var/lib/postgresql/data
+      - ./.containers/postgres:/var/lib/postgresql
