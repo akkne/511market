@@ -1,4 +1,4 @@
-namespace ResaleTelegramBot.Telegram.Shared;
+namespace ResaleTelegramBot.Telegram.Shared.Enums;
 
 public class CommandCodes
 {
