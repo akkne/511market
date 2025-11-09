@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ResaleTelegramBot.Persistence.DbContexts;
+using ResaleTelegramBot.Persistence.Scenes.Abstract;
+using ResaleTelegramBot.Persistence.Scenes.Implementation;
 using ResaleTelegramBot.Services.Abstract;
 using ResaleTelegramBot.Services.Implementation;
 using ResaleTelegramBot.Telegram.Helpers.Abstract;
@@ -43,6 +45,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     });
 
     services.AddScoped<IAuthService, AuthService>();
+
+    services.AddSingleton<ISceneStorage, RedisSceneStorage>();
 
     ConfigureTelegramServices(services, configuration);
 }
