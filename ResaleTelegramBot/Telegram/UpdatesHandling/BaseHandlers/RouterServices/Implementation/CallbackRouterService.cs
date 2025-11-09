@@ -14,6 +14,11 @@ public class CallbackRouterService : ICallbackRouterService
         _handlers = handlers;
     }
 
+    public bool CanHandle(CallbackQuery callbackQuery)
+    {
+        return _handlers.Any(h => h.CanHandle(callbackQuery));
+    }
+
     public async Task HandleCallbackAsync(CallbackQuery callbackQuery, ITelegramBotClient botClient,
                                           CancellationToken cancellationToken)
     {

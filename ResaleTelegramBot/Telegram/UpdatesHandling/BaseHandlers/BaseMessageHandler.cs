@@ -6,6 +6,7 @@ using global::Telegram.Bot.Polling;
 using global::Telegram.Bot.Types;
 using global::Telegram.Bot.Types.Enums;
 using RouterServices.Abstract;
+using Scenes.Gateway.Abstract;
 
 public class BaseUpdatesHandler : IUpdateHandler
 {
@@ -13,15 +14,18 @@ public class BaseUpdatesHandler : IUpdateHandler
     private readonly ICommandRouterService _commandRouterService;
     private readonly ILogger<BaseUpdatesHandler> _logger;
     private readonly IRegularTextRouterService _regularTextRouterService;
+    private readonly ISceneGatewayService _sceneGatewayService;
 
     public BaseUpdatesHandler(
         ILogger<BaseUpdatesHandler> logger, ICommandRouterService commandRouterService,
-        ICallbackRouterService callbackRouterService, IRegularTextRouterService regularTextRouterService)
+        ICallbackRouterService callbackRouterService, IRegularTextRouterService regularTextRouterService,
+        ISceneGatewayService sceneGatewayService)
     {
         _logger = logger;
         _commandRouterService = commandRouterService;
         _callbackRouterService = callbackRouterService;
         _regularTextRouterService = regularTextRouterService;
+        _sceneGatewayService = sceneGatewayService;
     }
 
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
@@ -40,10 +44,20 @@ public class BaseUpdatesHandler : IUpdateHandler
                 "Received message: {text} from user with username: {username} with id: {id}",
                 message.Text, message.From!.Username, message.From.Id);
 
-            if (message.Text!.StartsWith('/')) await HandleCommandAsync(botClient, message, cancellationToken);
+            if (message.Text!.StartsWith('/'))
+            {
+                await HandleCommandAsync(botClient, message, cancellationToken);
+                return;
+            }
 
             if (_regularTextRouterService.CanHandle(message.Text))
+            {
                 await HandleRegularTextAsync(botClient, message, cancellationToken);
+                return;
+            }
+
+            await _sceneGatewayService.HandleMessageAsync(message.From.Id, message, botClient, cancellationToken);
+            return;
         }
 
         if (update.CallbackQuery != null) await HandleCallbackAsync(botClient, update.CallbackQuery, cancellationToken);
@@ -67,7 +81,14 @@ public class BaseUpdatesHandler : IUpdateHandler
         try
         {
             await botClient.AnswerCallbackQuery(callbackQuery.Id, cancellationToken: cancellationToken);
-            await _callbackRouterService.HandleCallbackAsync(callbackQuery, botClient, cancellationToken);
+            if (_callbackRouterService.CanHandle(callbackQuery))
+            {
+                await _callbackRouterService.HandleCallbackAsync(callbackQuery, botClient, cancellationToken);
+                return;
+            }
+
+            await _sceneGatewayService.HandleCallbackAsync(callbackQuery.From.Id, callbackQuery, botClient,
+                cancellationToken);
         }
         catch (Exception exception)
         {
