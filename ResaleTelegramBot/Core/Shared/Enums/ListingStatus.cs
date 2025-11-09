@@ -1,4 +1,4 @@
-namespace ResaleTelegramBot.Core.Shared;
+namespace ResaleTelegramBot.Core.Shared.Enums;
 
 public enum ListingStatus
 {

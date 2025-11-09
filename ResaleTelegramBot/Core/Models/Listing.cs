@@ -1,6 +1,6 @@
 namespace ResaleTelegramBot.Core.Models;
 
-using Shared;
+using Shared.Enums;
 
 public class Listing
 {

@@ -1,6 +1,6 @@
 namespace ResaleTelegramBot.Core.Models;
 
-using Data;
+using Shared.Models;
 
 public class User
 {

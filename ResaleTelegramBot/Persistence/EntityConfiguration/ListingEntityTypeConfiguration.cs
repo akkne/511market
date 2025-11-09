@@ -1,7 +1,7 @@
 namespace ResaleTelegramBot.Persistence.EntityConfiguration;
 
 using Core.Models;
-using Core.Shared;
+using Core.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

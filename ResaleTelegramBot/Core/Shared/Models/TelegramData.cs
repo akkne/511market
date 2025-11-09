@@ -1,4 +1,4 @@
-namespace ResaleTelegramBot.Core.Data;
+namespace ResaleTelegramBot.Core.Shared.Models;
 
 public class TelegramData
 {
