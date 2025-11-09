@@ -13,7 +13,7 @@ public class ReplyKeyboardGenerator : IReplyKeyboardGenerator
         {
             KeyboardGenerationCodes.MainMenu => new ReplyKeyboardMarkup([
                 [RegularTextStaticTexts.FindListings, RegularTextStaticTexts.Favorite],
-                [RegularTextStaticTexts.MyProfile],
+                [RegularTextStaticTexts.MyProfile, RegularTextStaticTexts.AddListing],
                 [RegularTextStaticTexts.Settings]
             ])
             {
