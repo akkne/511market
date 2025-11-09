@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using ResaleTelegramBot.Persistence.DbContexts;
 using ResaleTelegramBot.Persistence.Scenes.Abstract;
 using ResaleTelegramBot.Persistence.Scenes.Implementation;
+using ResaleTelegramBot.Persistence.Scenes.Options;
 using ResaleTelegramBot.Services.Abstract;
 using ResaleTelegramBot.Services.Implementation;
 using ResaleTelegramBot.Telegram.Helpers.Abstract;
@@ -18,6 +19,7 @@ using ResaleTelegramBot.Telegram.Webhooks.Services.Abstract;
 using ResaleTelegramBot.Telegram.Webhooks.Services.Hosted;
 using ResaleTelegramBot.Telegram.Webhooks.Services.Implementation;
 using ResaleTelegramBot.Telegram.Webhooks.Services.Options;
+using StackExchange.Redis;
 using Telegram.Bot;
 using Telegram.Bot.Polling;
 
@@ -35,6 +37,9 @@ return;
 
 void ConfigureServices(IServiceCollection services, IConfiguration configuration)
 {
+    services.Configure<RedisSceneStorageConfiguration>(
+        configuration.GetSection(RedisSceneStorageConfiguration.SectionName));
+
     services.AddDbContext<ApplicationDbContext>(options =>
     {
         string connectionString = configuration.GetConnectionString(nameof(ApplicationDbContext))
@@ -42,6 +47,18 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
         options.UseNpgsql(connectionString)
                .EnableSensitiveDataLogging();
+    });
+
+    services.AddSingleton<IConnectionMultiplexer>(serviceProvider =>
+    {
+        RedisSceneStorageConfiguration configurationOptions =
+            serviceProvider.GetService<IOptions<RedisSceneStorageConfiguration>>()?.Value
+         ?? throw new Exception("No RedisSceneStorageConfiguration configured");
+
+        ConfigurationOptions options = ConfigurationOptions.Parse(configurationOptions.ConnectionString);
+        options.AbortOnConnectFail = configurationOptions.AbortOnConnectFail;
+
+        return ConnectionMultiplexer.Connect(options);
     });
 
     services.AddScoped<IAuthService, AuthService>();
