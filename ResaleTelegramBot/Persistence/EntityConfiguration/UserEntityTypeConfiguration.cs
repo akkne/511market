@@ -14,7 +14,6 @@ public class UserEntityTypeConfiguration : IEntityTypeConfiguration<User>
         builder.OwnsOne(x => x.TelegramData, data =>
         {
             data.Property(x => x.Id).IsRequired();
-            data.Property(x => x.Username).IsRequired();
         });
     }
 }
