@@ -13,7 +13,6 @@
         <Folder Include="Telegram\Scenes\Contexts\Implementation\"/>
         <Folder Include="Telegram\Scenes\Scenes\Implementation\"/>
         <Folder Include="Telegram\UpdatesHandling\Handlers\Callback\Implementation\"/>
-        <Folder Include="Telegram\UpdatesHandling\Handlers\StateText\Implementation\"/>
     </ItemGroup>
 
     <ItemGroup>

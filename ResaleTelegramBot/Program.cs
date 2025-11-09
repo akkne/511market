@@ -74,7 +74,6 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.AddScoped<ICallbackRouterService, CallbackRouterService>();
     services.AddScoped<ICommandRouterService, CommandRouterService>();
     services.AddScoped<IRegularTextRouterService, RegularTextRouterService>();
-    services.AddScoped<IStateTextRouterService, StateTextRouterService>();
 
     services.AddScoped<ICommandHandler, StartCommandHandler>();
 
