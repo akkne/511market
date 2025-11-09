@@ -18,10 +18,12 @@ public class User
             TelegramData = data,
             BuyerProfile = new BuyerProfile
             {
+                Id = Guid.NewGuid(),
                 Favorites = []
             },
             SellerProfile = new SellerProfile
             {
+                Id = Guid.NewGuid(),
                 Listings = []
             },
             CreatedAt = DateTime.UtcNow
