@@ -409,3 +409,5 @@ FodyWeavers.xsd
 docker-compose.*.yml
 appsettings.*.json
 launchSettings.json
+
+.containers
