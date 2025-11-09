@@ -8,6 +8,8 @@ using ResaleTelegramBot.Services.Abstract;
 using ResaleTelegramBot.Services.Implementation;
 using ResaleTelegramBot.Telegram.Helpers.Abstract;
 using ResaleTelegramBot.Telegram.Helpers.Implementation;
+using ResaleTelegramBot.Telegram.Scenes.Gateway.Abstract;
+using ResaleTelegramBot.Telegram.Scenes.Gateway.Implementation;
 using ResaleTelegramBot.Telegram.Scenes.Managers.Abstract;
 using ResaleTelegramBot.Telegram.Scenes.Managers.Implementation;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers;
@@ -103,4 +105,6 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.AddTransient<IReplyKeyboardGenerator, ReplyKeyboardGenerator>();
 
     services.AddScoped<ISceneManager, SceneManager>();
+
+    services.AddScoped<ISceneGatewayService, SceneGatewayService>();
 }
