@@ -8,4 +8,5 @@ public class AddListingSceneContext : BaseSceneContext
     public AddListingSceneSteps CurrentStep { get; set; } = AddListingSceneSteps.Ready;
     public string Name { get; set; }
     public decimal Price { get; set; }
+    public string Description { get; set; }
 }

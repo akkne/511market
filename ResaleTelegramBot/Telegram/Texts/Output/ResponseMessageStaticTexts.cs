@@ -20,11 +20,11 @@ public class ResponseMessageStaticTexts
                                                   Введите цену товара
                                                   """;
 
-    public static string OnAddListingPriceCompleted = """
-                                                      Отлично! Вы ввели все данные.
+    public static string OnAddListingCompleted = """
+                                                 Отлично! Вы ввели все данные.
 
-                                                      Опубликовать обьявление?
-                                                      """;
+                                                 Опубликовать обьявление?
+                                                 """;
 
     public static string OnSuccessfulListingPublication = """
                                                           Ваше обьявление успешно опубликовано! Вы можете посмотреть его во вкладке Профиль
@@ -33,4 +33,10 @@ public class ResponseMessageStaticTexts
     public static string OnFailedListingPublication = """
                                                       Произошла ошибка при публикации вашего обьявления. Попробуйте снова, и в случае неудачи обратитесь в тех поддержку
                                                       """;
+
+    public static string OnAddListingDescription = """
+                                                   Отлично!
+
+                                                   Введите описание своего товара
+                                                   """;
 }

@@ -77,6 +77,9 @@ public class AddListingScene : IScene
             case AddListingSceneSteps.PriceEntering:
                 await HandlePriceChoosingAsync(context, message, bot, cancellationToken);
                 break;
+            case AddListingSceneSteps.DescriptionEntering:
+                await HandlerDescriptionEnteringAsync(context, message, bot, cancellationToken);
+                break;
             default:
                 _logger.LogWarning("Unexpected step {Step} for user {UserId}", context.CurrentStep, userId);
                 break;
@@ -110,7 +113,7 @@ public class AddListingScene : IScene
     {
         // TODO: Implement
         AddListingContract contract =
-            AddListingContract.Create(context.UserId, context.SceneName, string.Empty, context.Price,
+            AddListingContract.Create(context.UserId, context.SceneName, context.Description, context.Price,
                 Guid.NewGuid(), []);
 
         bool isCreated = await _listingService.AddListingAsync(contract, cancellationToken);
@@ -139,17 +142,13 @@ public class AddListingScene : IScene
             return;
         }
 
-        context.CurrentStep = AddListingSceneSteps.Completed;
+        context.CurrentStep = AddListingSceneSteps.DescriptionEntering;
         context.Price = price;
-        context.UpdatedAt = DateTime.UtcNow;
 
         await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
 
-        InlineKeyboardMarkup keyboardMarkup =
-            _callbackKeyboardGenerator.GenerateInlineKeyboardMarkup(CallbackGenerationCodes
-               .OnConfirmListingPublication);
-        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingPriceCompleted,
-            ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
+        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingDescription,
+            ParseMode.Html, cancellationToken: cancellationToken);
     }
 
     private async Task HandleNameChoosingAsync(AddListingSceneContext context, Message message, ITelegramBotClient bot,
@@ -164,11 +163,33 @@ public class AddListingScene : IScene
         string name = message.Text;
         context.CurrentStep = AddListingSceneSteps.PriceEntering;
         context.Name = name;
-        context.UpdatedAt = DateTime.UtcNow;
 
         await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
 
         await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnListingPriceEntering,
             ParseMode.Html, cancellationToken: cancellationToken);
+    }
+
+    private async Task HandlerDescriptionEnteringAsync(AddListingSceneContext context, Message message,
+                                                       ITelegramBotClient bot, CancellationToken cancellationToken)
+    {
+        if (message.Text == null)
+        {
+            _logger.LogWarning("Message text is null");
+            return;
+        }
+
+        string description = message.Text;
+        context.CurrentStep = AddListingSceneSteps.Completed;
+        context.Description = description;
+
+        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
+
+        InlineKeyboardMarkup keyboardMarkup =
+            _callbackKeyboardGenerator.GenerateInlineKeyboardMarkup(CallbackGenerationCodes
+               .OnConfirmListingPublication);
+
+        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingCompleted,
+            ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
     }
 }

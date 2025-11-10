@@ -5,5 +5,6 @@ public enum AddListingSceneSteps
     Ready,
     NameEntering,
     PriceEntering,
+    DescriptionEntering,
     Completed
 }
