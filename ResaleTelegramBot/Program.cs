@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using ResaleTelegramBot.Persistence.DbContexts;
+using ResaleTelegramBot.Persistence.DbContexts.Extensions;
 using ResaleTelegramBot.Persistence.Scenes.Abstract;
 using ResaleTelegramBot.Persistence.Scenes.Implementation;
 using ResaleTelegramBot.Persistence.Scenes.Options;
@@ -38,6 +39,8 @@ ConfigureServices(builder.Services, builder.Configuration);
 WebApplication app = builder.Build();
 
 app.MapWebhookEndpoints();
+
+await app.ConfigureMigrations();
 
 app.Run();
 
