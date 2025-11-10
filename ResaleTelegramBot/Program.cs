@@ -12,11 +12,15 @@ using ResaleTelegramBot.Telegram.Scenes.Gateway.Abstract;
 using ResaleTelegramBot.Telegram.Scenes.Gateway.Implementation;
 using ResaleTelegramBot.Telegram.Scenes.Managers.Abstract;
 using ResaleTelegramBot.Telegram.Scenes.Managers.Implementation;
+using ResaleTelegramBot.Telegram.Scenes.Scenes.Abstract;
+using ResaleTelegramBot.Telegram.Scenes.Scenes.Implementation;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Abstract;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Implementation;
 using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Command.Abstract;
 using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Command.Implementation;
+using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.RegularText.Abstract;
+using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.RegularText.Implementation;
 using ResaleTelegramBot.Telegram.Webhooks.Configuration;
 using ResaleTelegramBot.Telegram.Webhooks.Endpoints;
 using ResaleTelegramBot.Telegram.Webhooks.Services.Abstract;
@@ -66,6 +70,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     });
 
     services.AddScoped<IAuthService, AuthService>();
+    services.AddScoped<IListingService, ListingService>();
 
     services.AddSingleton<ISceneStorage, RedisSceneStorage>();
 
@@ -100,6 +105,8 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.AddScoped<ICommandRouterService, CommandRouterService>();
     services.AddScoped<IRegularTextRouterService, RegularTextRouterService>();
 
+    services.AddScoped<IRegularTextHandler, AddListingRegularTextHandler>();
+
     services.AddScoped<ICommandHandler, StartCommandHandler>();
 
     services.AddTransient<IReplyKeyboardGenerator, ReplyKeyboardGenerator>();
@@ -107,4 +114,9 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.AddScoped<ISceneManager, SceneManager>();
 
     services.AddScoped<ISceneGatewayService, SceneGatewayService>();
+
+    services.AddScoped<IScene, AddListingScene>();
+
+    services.AddTransient<ICallbackKeyboardGenerator, CallbackKeyboardGenerator>();
+    services.AddTransient<ICallbackGenerator, CallbackGenerator>();
 }

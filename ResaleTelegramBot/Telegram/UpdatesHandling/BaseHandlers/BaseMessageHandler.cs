@@ -31,28 +31,29 @@ public class BaseUpdatesHandler : IUpdateHandler
     public async Task HandleUpdateAsync(ITelegramBotClient botClient, Update update,
                                         CancellationToken cancellationToken)
     {
-        if (update.Message == null) return;
-
-        Message message = update.Message;
-
-        if (message.Type == MessageType.Text && message.Text != null)
+        if (update.Message is { Type: MessageType.Text, Text: not null })
         {
+            Message message = update.Message;
             if (message.From == null)
                 return;
 
             _logger.LogInformation(
                 "Received message: {text} from user with username: {username} with id: {id}",
-                message.Text, message.From!.Username, message.From.Id);
+                message.Text, message.From.Username, message.From.Id);
 
             if (message.Text!.StartsWith('/'))
             {
+                await _sceneGatewayService.ExitCurrentSceneAsync(message.From.Id, botClient, cancellationToken);
                 await HandleCommandAsync(botClient, message, cancellationToken);
+
                 return;
             }
 
             if (_regularTextRouterService.CanHandle(message.Text))
             {
+                await _sceneGatewayService.ExitCurrentSceneAsync(message.From.Id, botClient, cancellationToken);
                 await HandleRegularTextAsync(botClient, message, cancellationToken);
+
                 return;
             }
 

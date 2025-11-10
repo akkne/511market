@@ -5,8 +5,8 @@ using Contracts.Listing;
 
 public class ListingService : IListingService
 {
-    public async Task<bool> AddListingAsync(AddListingContract contract, CancellationToken cancellationToken = default)
+    public Task<bool> AddListingAsync(AddListingContract contract, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        return Task.FromResult(true);
     }
 }

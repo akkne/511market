@@ -9,4 +9,28 @@ public class ResponseMessageStaticTexts
                                    Покупаешь или продаёшь — всё делается здесь и сейчас.
                                    Выбирай действие:
                                    """;
+
+    public static string OnAddListing = """
+                                        Отлично!
+
+                                        Введите название своего товара
+                                        """;
+
+    public static string OnListingPriceEntering = """
+                                                  Введите цену товара
+                                                  """;
+
+    public static string OnAddListingPriceCompleted = """
+                                                      Отлично! Вы ввели все данные.
+
+                                                      Опубликовать обьявление?
+                                                      """;
+
+    public static string OnSuccessfulListingPublication = """
+                                                          Ваше обьявление успешно опубликовано! Вы можете посмотреть его во вкладке Профиль
+                                                          """;
+
+    public static string OnFailedListingPublication = """
+                                                      Произошла ошибка при публикации вашего обьявления. Попробуйте снова, и в случае неудачи обратитесь в тех поддержку
+                                                      """;
 }

@@ -9,7 +9,7 @@ using global::Telegram.Bot.Types.ReplyMarkups;
 using Helpers.Abstract;
 using Helpers.Shared.Enums;
 using Services.Abstract;
-using Services.Contracts;
+using Services.Contracts.Auth;
 using Shared.Enums;
 using Texts.Output;
 using User = Core.Models.User;

@@ -9,7 +9,6 @@
 
     <ItemGroup>
         <Folder Include="Helpers\"/>
-        <Folder Include="Telegram\Scenes\Contexts\Implementation\"/>
         <Folder Include="Telegram\UpdatesHandling\Handlers\Callback\Implementation\"/>
     </ItemGroup>
 
