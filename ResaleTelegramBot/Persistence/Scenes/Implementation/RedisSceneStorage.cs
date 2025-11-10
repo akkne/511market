@@ -76,15 +76,12 @@ public class RedisSceneStorage : ISceneStorage
         RedisKey key = GetContextKey(userId, sceneName);
         RedisKey indexKey = GetIndexKey(userId);
 
-        ITransaction transaction = _redisDatabase.CreateTransaction();
+        await _redisDatabase.StringSetAsync(key, json);
+        await _redisDatabase.KeyExpireAsync(key, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
 
-        await transaction.StringSetAsync(key, json);
-        await transaction.KeyExpireAsync(key, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
+        bool ok = await _redisDatabase.SetAddAsync(indexKey, sceneName);
+        await _redisDatabase.KeyExpireAsync(indexKey, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
 
-        await transaction.SetAddAsync(indexKey, sceneName);
-        await transaction.KeyExpireAsync(indexKey, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
-
-        bool ok = await transaction.ExecuteAsync().ConfigureAwait(false);
         if (!ok)
             _logger.LogWarning("Redis transaction failed when saving context for user {UserId}, scene {SceneName}",
                 userId, sceneName);
@@ -92,17 +89,29 @@ public class RedisSceneStorage : ISceneStorage
 
     public async Task RemoveSceneContextAsync(long userId, string sceneName, CancellationToken cancellationToken)
     {
-        RedisKey key = GetContextKey(userId, sceneName);
-        RedisKey indexKey = GetIndexKey(userId);
+        try
+        {
+            RedisKey key = GetContextKey(userId, sceneName);
+            RedisKey indexKey = GetIndexKey(userId);
 
-        ITransaction transaction = _redisDatabase.CreateTransaction();
-        await transaction.KeyDeleteAsync(key);
-        await transaction.SetRemoveAsync(indexKey, sceneName);
+            _logger.LogInformation("Removing scene context for user {UserId}, scene {SceneName}", userId, sceneName);
 
-        bool ok = await transaction.ExecuteAsync().ConfigureAwait(false);
-        if (!ok)
-            _logger.LogWarning("Redis transaction failed when removing context for user {UserId}, scene {SceneName}",
+            bool keyDeleted = await _redisDatabase.KeyDeleteAsync(key).ConfigureAwait(false);
+            bool isRemoved = await _redisDatabase.SetRemoveAsync(indexKey, sceneName).ConfigureAwait(false);
+
+            if (!isRemoved || !keyDeleted) _logger.LogWarning("Failed to remove user's scene");
+
+            _logger.LogInformation(
+                "Removed scene context for user {UserId}, scene {SceneName}. Key deleted: {KeyDeleted}",
+                userId, sceneName, keyDeleted);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception,
+                "Failed to remove scene context for user {UserId}, scene {SceneName}",
                 userId, sceneName);
+            throw;
+        }
     }
 
     public async Task RemoveAllScenesAsync(long userId, CancellationToken cancellationToken)
@@ -132,8 +141,18 @@ public class RedisSceneStorage : ISceneStorage
 
     public async Task SetActiveSceneAsync(long userId, string sceneName, CancellationToken cancellationToken)
     {
-        await _redisDatabase.StringSetAsync(GetActiveKey(userId), sceneName,
+        RedisKey activeKey = GetActiveKey(userId);
+
+        if (string.IsNullOrEmpty(sceneName))
+        {
+            await _redisDatabase.KeyDeleteAsync(activeKey).ConfigureAwait(false);
+            _logger.LogInformation("Removed active scene for user {UserId}", userId);
+            return;
+        }
+
+        await _redisDatabase.StringSetAsync(activeKey, sceneName,
             TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds)).ConfigureAwait(false);
+        _logger.LogInformation("Set active scene for user {UserId} to {SceneName}", userId, sceneName);
     }
 
     private static RedisKey GetContextKey(long userId, string sceneName)
