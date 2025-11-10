@@ -1,4 +1,4 @@
-namespace ResaleTelegramBot.Services.Contracts;
+namespace ResaleTelegramBot.Services.Contracts.Auth;
 
 using Core.Shared.Models;
 

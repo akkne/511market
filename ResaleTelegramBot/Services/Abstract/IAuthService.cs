@@ -1,6 +1,6 @@
 namespace ResaleTelegramBot.Services.Abstract;
 
-using Contracts;
+using Contracts.Auth;
 using Core.Models;
 
 public interface IAuthService

@@ -1,7 +1,7 @@
 namespace ResaleTelegramBot.Services.Implementation;
 
 using Abstract;
-using Contracts;
+using Contracts.Auth;
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
