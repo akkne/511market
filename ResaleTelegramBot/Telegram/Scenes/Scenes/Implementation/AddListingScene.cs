@@ -1,6 +1,5 @@
 namespace ResaleTelegramBot.Telegram.Scenes.Scenes.Implementation;
 
-using System.Linq;
 using System.Text.RegularExpressions;
 using Abstract;
 using Contexts.Implementation;
@@ -170,12 +169,12 @@ public class AddListingScene : IScene
                                                          ITelegramBotClient bot, CancellationToken cancellationToken)
     {
         List<ListingPhotosModel> photos = context.Photos
-            .Select((fileId, index) => new ListingPhotosModel
-            {
-                TelegramFileId = fileId,
-                Order = index
-            })
-            .ToList();
+                                                 .Select((fileId, index) => new ListingPhotosModel
+                                                  {
+                                                      TelegramFileId = fileId,
+                                                      Order = index
+                                                  })
+                                                 .ToList();
 
         AddListingContract contract =
             AddListingContract.Create(context.UserId, context.Name, context.Description, context.Price,
@@ -186,6 +185,7 @@ public class AddListingScene : IScene
             ? ResponseMessageStaticTexts.OnSuccessfulListingPublication
             : ResponseMessageStaticTexts.OnFailedListingPublication;
 
+        await bot.DeleteMessage(context.UserId, context.LastMessageId, cancellationToken);
         await bot.SendMessage(contract.TelegramUserId, responseText, ParseMode.Html,
             cancellationToken: cancellationToken);
 
@@ -250,11 +250,8 @@ public class AddListingScene : IScene
 
         await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
 
-        InlineKeyboardMarkup keyboardMarkup =
-            _callbackKeyboardGenerator.GenerateOnFinishPhotoUploading();
-
         await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingPhotoUploading,
-            ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
+            ParseMode.Html, cancellationToken: cancellationToken);
     }
 
     private async Task HandlePhotoUploadingAsync(AddListingSceneContext context, Message message,
@@ -281,7 +278,6 @@ public class AddListingScene : IScene
 
         context.Photos.Add(fileId);
 
-        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
 
         InlineKeyboardMarkup inlineKeyboard =
             _callbackKeyboardGenerator.GenerateOnFinishPhotoUploading();
@@ -290,26 +286,37 @@ public class AddListingScene : IScene
         {
             await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingPhotoLimitReached,
                 ParseMode.Html, replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
+            return;
         }
-        else
-        {
-            await bot.SendMessage(context.UserId,
-                $"{ResponseMessageStaticTexts.OnAddListingPhotoUploaded}\nЗагружено фото: {context.Photos.Count}/{maxPhotos}",
-                ParseMode.Html, replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
-        }
+
+        string responseText = $"""
+                               {ResponseMessageStaticTexts.OnAddListingPhotoUploaded}
+                               Загружено фото: {context.Photos.Count}/{maxPhotos}
+                               """;
+
+        if (context.Photos.Count != 1)
+            await bot.DeleteMessage(context.UserId, context.LastMessageId, cancellationToken);
+
+        Message messageSend = await bot.SendMessage(context.UserId, responseText,
+            ParseMode.Html, replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
+
+        context.LastMessageId = messageSend.Id;
+        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
     }
 
     private async Task HandleFinishPhotoUploadingAsync(AddListingSceneContext context, ITelegramBotClient bot,
                                                        CancellationToken cancellationToken)
     {
-        context.CurrentStep = AddListingSceneSteps.Completed;
-
-        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
-
         InlineKeyboardMarkup keyboardMarkup =
             _callbackKeyboardGenerator.GenerateOnConfirmListingPublication();
 
-        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingCompleted,
+        await bot.DeleteMessage(context.UserId, context.LastMessageId, cancellationToken);
+
+        Message message = await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingCompleted,
             ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
+
+        context.CurrentStep = AddListingSceneSteps.Completed;
+        context.LastMessageId = message.Id;
+        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
     }
 }
