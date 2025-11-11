@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using Abstract;
 using Contexts.Implementation;
 using Contexts.SceneSteps;
+using Core.Models;
 using global::Telegram.Bot;
 using global::Telegram.Bot.Types;
 using global::Telegram.Bot.Types.Enums;
@@ -20,27 +21,27 @@ public class AddListingScene : IScene
 {
     private readonly ICallbackGenerator _callbackGenerator;
     private readonly ICallbackKeyboardGenerator _callbackKeyboardGenerator;
+    private readonly ICategoryService _categoryService;
     private readonly IListingService _listingService;
     private readonly ILogger<AddListingScene> _logger;
     private readonly ISceneStorage _storage;
 
     public AddListingScene(ISceneStorage storage, ILogger<AddListingScene> logger, ICallbackGenerator callbackGenerator,
-                           IListingService listingService, ICallbackKeyboardGenerator callbackKeyboardGenerator)
+                           IListingService listingService, ICallbackKeyboardGenerator callbackKeyboardGenerator,
+                           ICategoryService categoryService)
     {
         _storage = storage;
         _logger = logger;
         _callbackGenerator = callbackGenerator;
         _listingService = listingService;
         _callbackKeyboardGenerator = callbackKeyboardGenerator;
+        _categoryService = categoryService;
     }
 
     public string SceneName => SceneNames.AddListingScene;
 
     public async Task EnterAsync(long userId, ITelegramBotClient bot, CancellationToken cancellationToken)
     {
-        await bot.SendMessage(userId, ResponseMessageStaticTexts.OnAddListing, ParseMode.Html,
-            cancellationToken: cancellationToken);
-
         AddListingSceneContext context = await _storage.GetOrCreateSceneContextAsync(
             userId,
             SceneName,
@@ -52,10 +53,16 @@ public class AddListingScene : IScene
             },
             cancellationToken);
 
-        context.CurrentStep = AddListingSceneSteps.NameEntering;
-        context.UpdatedAt = DateTime.UtcNow;
+        context.CurrentStep = AddListingSceneSteps.CategoryChoosing;
 
         await _storage.SaveSceneContextAsync(userId, SceneName, context, cancellationToken);
+
+        List<Category> categories = await _categoryService.GetCategoriesAsync(cancellationToken);
+        InlineKeyboardMarkup keyboardMarkup =
+            _callbackKeyboardGenerator.GenerateOnChoosingCategoryOnAddingListing(categories);
+
+        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnCategoryChoosingOnAddingListing,
+            ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
     }
 
     public async Task HandleMessageAsync(long userId, Message message, ITelegramBotClient bot,
@@ -78,7 +85,7 @@ public class AddListingScene : IScene
                 await HandlePriceChoosingAsync(context, message, bot, cancellationToken);
                 break;
             case AddListingSceneSteps.DescriptionEntering:
-                await HandlerDescriptionEnteringAsync(context, message, bot, cancellationToken);
+                await HandleDescriptionEnteringAsync(context, message, bot, cancellationToken);
                 break;
             default:
                 _logger.LogWarning("Unexpected step {Step} for user {UserId}", context.CurrentStep, userId);
@@ -99,7 +106,19 @@ public class AddListingScene : IScene
                                                                .Match(callback.Data);
 
         if (addListingConfigurationMatch.Success && context.CurrentStep == AddListingSceneSteps.Completed)
+        {
             await HandleAddListingConfirmationAsync(context, addListingConfigurationMatch, bot, cancellationToken);
+            return;
+        }
+
+        Match addCategoryOnAddListingConfigurationMatch = _callbackGenerator
+                                                         .GetCallbackRegexOnChoosingCategoryOnAddingListing()
+                                                         .Match(callback.Data);
+
+        if (addCategoryOnAddListingConfigurationMatch.Success &&
+            context.CurrentStep == AddListingSceneSteps.CategoryChoosing)
+            await HandleChooseCategoryAddListingConfirmationAsync(context, addCategoryOnAddListingConfigurationMatch,
+                bot, cancellationToken);
     }
 
     public Task ExitAsync(long userId, ITelegramBotClient bot, CancellationToken cancellationToken)
@@ -108,13 +127,38 @@ public class AddListingScene : IScene
         return Task.CompletedTask;
     }
 
-    private async Task HandleAddListingConfirmationAsync(AddListingSceneContext context, Match message,
+    private async Task HandleChooseCategoryAddListingConfirmationAsync(AddListingSceneContext context, Match match,
+                                                                       ITelegramBotClient bot,
+                                                                       CancellationToken cancellationToken)
+    {
+        string stringGuid = match.Groups[CallbackGenerationStaticStrings.CategoryId].Value;
+        if (!Guid.TryParse(stringGuid, out Guid categoryGuid))
+        {
+            _logger.LogWarning("Category Guid: {guid} is not a Guid", stringGuid);
+            return;
+        }
+
+        bool exists = await _categoryService.ContainsByIdAsync(categoryGuid, cancellationToken);
+        if (!exists)
+        {
+            _logger.LogWarning("Category {CategoryId} doesn't exist", categoryGuid);
+            return;
+        }
+
+        context.CurrentStep = AddListingSceneSteps.NameEntering;
+        context.CategoryId = categoryGuid;
+        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
+
+        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnNameEntering, ParseMode.Html,
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task HandleAddListingConfirmationAsync(AddListingSceneContext context, Match match,
                                                          ITelegramBotClient bot, CancellationToken cancellationToken)
     {
-        // TODO: Implement
         AddListingContract contract =
             AddListingContract.Create(context.UserId, context.SceneName, context.Description, context.Price,
-                Guid.NewGuid(), []);
+                context.CategoryId, []);
 
         bool isCreated = await _listingService.AddListingAsync(contract, cancellationToken);
         string responseText = isCreated
@@ -170,8 +214,8 @@ public class AddListingScene : IScene
             ParseMode.Html, cancellationToken: cancellationToken);
     }
 
-    private async Task HandlerDescriptionEnteringAsync(AddListingSceneContext context, Message message,
-                                                       ITelegramBotClient bot, CancellationToken cancellationToken)
+    private async Task HandleDescriptionEnteringAsync(AddListingSceneContext context, Message message,
+                                                      ITelegramBotClient bot, CancellationToken cancellationToken)
     {
         if (message.Text == null)
         {
@@ -186,8 +230,7 @@ public class AddListingScene : IScene
         await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
 
         InlineKeyboardMarkup keyboardMarkup =
-            _callbackKeyboardGenerator.GenerateInlineKeyboardMarkup(CallbackGenerationCodes
-               .OnConfirmListingPublication);
+            _callbackKeyboardGenerator.GenerateOnConfirmListingPublication();
 
         await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingCompleted,
             ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);

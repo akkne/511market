@@ -1,8 +1,8 @@
 namespace ResaleTelegramBot.Telegram.Helpers.Implementation;
 
 using Abstract;
+using Core.Models;
 using global::Telegram.Bot.Types.ReplyMarkups;
-using Shared.Enums;
 using Texts.Input;
 
 public class CallbackKeyboardGenerator : ICallbackKeyboardGenerator
@@ -14,17 +14,33 @@ public class CallbackKeyboardGenerator : ICallbackKeyboardGenerator
         _callbackGenerator = callbackGenerator;
     }
 
-    public InlineKeyboardMarkup GenerateInlineKeyboardMarkup(CallbackGenerationCodes code)
+    public InlineKeyboardMarkup GenerateOnConfirmListingPublication()
     {
-        return code switch
+        return new InlineKeyboardMarkup(
+            new InlineKeyboardButton(CallbackKeyboardStaticTexts.OnListingPublicationConfirm)
+            {
+                CallbackData = _callbackGenerator.GenerateCallbackRegexOnConfirmListingPublication()
+            });
+    }
+
+    public InlineKeyboardMarkup GenerateOnChoosingCategoryOnAddingListing(List<Category> categories)
+    {
+        List<Category> categoriesToShow = categories[..6];
+
+        List<List<InlineKeyboardButton>> rows = [];
+        for (int i = 0; i < categoriesToShow.Count; i += 3)
         {
-            CallbackGenerationCodes.OnConfirmListingPublication =>
-                new InlineKeyboardMarkup(
-                    new InlineKeyboardButton(CallbackKeyboardStaticTexts.OnListingPublicationConfirm)
-                    {
-                        CallbackData = _callbackGenerator.GenerateCallbackRegexOnConfirmListingPublication()
-                    }),
-            _ => throw new ArgumentOutOfRangeException(nameof(code), code, null)
-        };
+            List<InlineKeyboardButton> row = [];
+            for (int j = i; j < i + 3; j++)
+                row.Add(new InlineKeyboardButton(categoriesToShow[j].Name)
+                {
+                    CallbackData =
+                        _callbackGenerator.GenerateCallbackRegexOnChoosingCategoryOnAddingListing(categoriesToShow[j].Id
+                           .ToString())
+                });
+            rows.Add(row);
+        }
+
+        return new InlineKeyboardMarkup(rows);
     }
 }

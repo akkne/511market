@@ -6,4 +6,7 @@ public interface ICallbackGenerator
 {
     Regex GetCallbackRegexOnConfirmListingPublication();
     string GenerateCallbackRegexOnConfirmListingPublication();
+
+    Regex GetCallbackRegexOnChoosingCategoryOnAddingListing();
+    string GenerateCallbackRegexOnChoosingCategoryOnAddingListing(string categoryGuid);
 }

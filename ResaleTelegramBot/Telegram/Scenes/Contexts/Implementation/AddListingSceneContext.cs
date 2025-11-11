@@ -6,6 +6,7 @@ using SceneSteps;
 public class AddListingSceneContext : BaseSceneContext
 {
     public AddListingSceneSteps CurrentStep { get; set; } = AddListingSceneSteps.Ready;
+    public Guid CategoryId { get; set; }
     public string Name { get; set; }
     public decimal Price { get; set; }
     public string Description { get; set; }

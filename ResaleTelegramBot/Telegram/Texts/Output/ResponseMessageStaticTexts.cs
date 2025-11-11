@@ -10,11 +10,11 @@ public class ResponseMessageStaticTexts
                                    Выбирай действие:
                                    """;
 
-    public static string OnAddListing = """
-                                        Отлично!
+    public static string OnNameEntering = """
+                                          Отлично!
 
-                                        Введите название своего товара
-                                        """;
+                                          Введите название своего товара
+                                          """;
 
     public static string OnListingPriceEntering = """
                                                   Введите цену товара
@@ -39,4 +39,8 @@ public class ResponseMessageStaticTexts
 
                                                    Введите описание своего товара
                                                    """;
+
+    public static string OnCategoryChoosingOnAddingListing = """
+                                                             Хорошо. Теперь выберите категорию для вашего товара из нижеперечисленных
+                                                             """;
 }
