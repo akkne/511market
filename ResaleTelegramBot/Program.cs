@@ -74,6 +74,7 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
 
     services.AddScoped<IAuthService, AuthService>();
     services.AddScoped<IListingService, ListingService>();
+    services.AddScoped<ICategoryService, CategoryService>();
 
     services.AddSingleton<ISceneStorage, RedisSceneStorage>();
 
