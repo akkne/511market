@@ -9,4 +9,7 @@ public interface ICallbackGenerator
 
     Regex GetCallbackRegexOnChoosingCategoryOnAddingListing();
     string GenerateCallbackRegexOnChoosingCategoryOnAddingListing(string categoryGuid);
+
+    Regex GetCallbackRegexOnFinishPhotoUploading();
+    string GenerateCallbackRegexOnFinishPhotoUploading();
 }

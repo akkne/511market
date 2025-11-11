@@ -1,5 +1,6 @@
 namespace ResaleTelegramBot.Telegram.Scenes.Scenes.Implementation;
 
+using System.Linq;
 using System.Text.RegularExpressions;
 using Abstract;
 using Contexts.Implementation;
@@ -14,6 +15,7 @@ using Helpers.Shared.Enums;
 using Persistence.Scenes.Abstract;
 using Services.Abstract;
 using Services.Contracts.Listing;
+using Services.Contracts.Listing.Models;
 using Shared;
 using Texts.Output;
 
@@ -89,6 +91,9 @@ public class AddListingScene : IScene
             case AddListingSceneSteps.DescriptionEntering:
                 await HandleDescriptionEnteringAsync(context, message, bot, cancellationToken);
                 break;
+            case AddListingSceneSteps.PhotoUploading:
+                await HandlePhotoUploadingAsync(context, message, bot, cancellationToken);
+                break;
             default:
                 _logger.LogWarning("Unexpected step {Step} for user {UserId}", context.CurrentStep, userId);
                 break;
@@ -121,6 +126,12 @@ public class AddListingScene : IScene
             context.CurrentStep == AddListingSceneSteps.CategoryChoosing)
             await HandleChooseCategoryAddListingConfirmationAsync(context, addCategoryOnAddListingConfigurationMatch,
                 bot, cancellationToken);
+
+        Match finishPhotoUploadingMatch = _callbackGenerator.GetCallbackRegexOnFinishPhotoUploading()
+                                                            .Match(callback.Data);
+
+        if (finishPhotoUploadingMatch.Success && context.CurrentStep == AddListingSceneSteps.PhotoUploading)
+            await HandleFinishPhotoUploadingAsync(context, bot, cancellationToken);
     }
 
     public Task ExitAsync(long userId, ITelegramBotClient bot, CancellationToken cancellationToken)
@@ -158,9 +169,17 @@ public class AddListingScene : IScene
     private async Task HandleAddListingConfirmationAsync(AddListingSceneContext context, Match match,
                                                          ITelegramBotClient bot, CancellationToken cancellationToken)
     {
+        List<ListingPhotosModel> photos = context.Photos
+            .Select((fileId, index) => new ListingPhotosModel
+            {
+                TelegramFileId = fileId,
+                Order = index
+            })
+            .ToList();
+
         AddListingContract contract =
-            AddListingContract.Create(context.UserId, context.SceneName, context.Description, context.Price,
-                context.CategoryId, []);
+            AddListingContract.Create(context.UserId, context.Name, context.Description, context.Price,
+                context.CategoryId, photos);
 
         bool isCreated = await _listingService.AddListingAsync(contract, cancellationToken);
         string responseText = isCreated
@@ -226,8 +245,64 @@ public class AddListingScene : IScene
         }
 
         string description = message.Text;
-        context.CurrentStep = AddListingSceneSteps.Completed;
+        context.CurrentStep = AddListingSceneSteps.PhotoUploading;
         context.Description = description;
+
+        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
+
+        InlineKeyboardMarkup keyboardMarkup =
+            _callbackKeyboardGenerator.GenerateOnFinishPhotoUploading();
+
+        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingPhotoUploading,
+            ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
+    }
+
+    private async Task HandlePhotoUploadingAsync(AddListingSceneContext context, Message message,
+                                                 ITelegramBotClient bot, CancellationToken cancellationToken)
+    {
+        if (message.Photo == null || message.Photo.Length == 0)
+        {
+            _logger.LogWarning("Message photo is null or empty");
+            return;
+        }
+
+        const int maxPhotos = 10;
+        if (context.Photos.Count >= maxPhotos)
+        {
+            InlineKeyboardMarkup keyboardMarkup =
+                _callbackKeyboardGenerator.GenerateOnFinishPhotoUploading();
+            await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingPhotoLimitReached,
+                ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
+            return;
+        }
+
+        PhotoSize[] photos = message.Photo;
+        string fileId = photos[^1].FileId;
+
+        context.Photos.Add(fileId);
+
+        await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
+
+        InlineKeyboardMarkup inlineKeyboard =
+            _callbackKeyboardGenerator.GenerateOnFinishPhotoUploading();
+
+        if (context.Photos.Count >= maxPhotos)
+        {
+            await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnAddListingPhotoLimitReached,
+                ParseMode.Html, replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
+        }
+        else
+        {
+            await bot.SendMessage(context.UserId,
+                $"{ResponseMessageStaticTexts.OnAddListingPhotoUploaded}\nЗагружено фото: {context.Photos.Count}/{maxPhotos}",
+                ParseMode.Html, replyMarkup: inlineKeyboard, cancellationToken: cancellationToken);
+        }
+    }
+
+    private async Task HandleFinishPhotoUploadingAsync(AddListingSceneContext context, ITelegramBotClient bot,
+                                                       CancellationToken cancellationToken)
+    {
+        context.CurrentStep = AddListingSceneSteps.Completed;
 
         await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
 

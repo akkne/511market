@@ -7,4 +7,5 @@ public interface ICallbackKeyboardGenerator
 {
     InlineKeyboardMarkup GenerateOnConfirmListingPublication();
     InlineKeyboardMarkup GenerateOnChoosingCategoryOnAddingListing(List<Category> categories);
+    InlineKeyboardMarkup GenerateOnFinishPhotoUploading();
 }

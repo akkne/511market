@@ -61,6 +61,20 @@ public class BaseUpdatesHandler : IUpdateHandler
             return;
         }
 
+        if (update.Message is { Type: MessageType.Photo } messageWithPhoto)
+        {
+            if (messageWithPhoto.From == null)
+                return;
+
+            _logger.LogInformation(
+                "Received photo from user with username: {username} with id: {id}",
+                messageWithPhoto.From.Username, messageWithPhoto.From.Id);
+
+            await _sceneGatewayService.HandleMessageAsync(messageWithPhoto.From.Id, messageWithPhoto, botClient,
+                cancellationToken);
+            return;
+        }
+
         if (update.CallbackQuery != null) await HandleCallbackAsync(botClient, update.CallbackQuery, cancellationToken);
     }
 

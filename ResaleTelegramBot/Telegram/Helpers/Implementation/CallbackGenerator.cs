@@ -25,4 +25,14 @@ public class CallbackGenerator : ICallbackGenerator
     {
         return $"listing/adding/category/{categoryGuid}";
     }
+
+    public Regex GetCallbackRegexOnFinishPhotoUploading()
+    {
+        return new Regex("listing/adding/photo/finish");
+    }
+
+    public string GenerateCallbackRegexOnFinishPhotoUploading()
+    {
+        return "listing/adding/photo/finish";
+    }
 }

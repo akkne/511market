@@ -7,5 +7,6 @@ public enum AddListingSceneSteps
     NameEntering,
     PriceEntering,
     DescriptionEntering,
+    PhotoUploading,
     Completed
 }

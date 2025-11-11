@@ -43,4 +43,13 @@ public class CallbackKeyboardGenerator : ICallbackKeyboardGenerator
 
         return new InlineKeyboardMarkup(rows);
     }
+
+    public InlineKeyboardMarkup GenerateOnFinishPhotoUploading()
+    {
+        return new InlineKeyboardMarkup(
+            new InlineKeyboardButton(CallbackKeyboardStaticTexts.OnFinishPhotoUploading)
+            {
+                CallbackData = _callbackGenerator.GenerateCallbackRegexOnFinishPhotoUploading()
+            });
+    }
 }
