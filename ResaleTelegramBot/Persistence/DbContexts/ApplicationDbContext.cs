@@ -2,6 +2,7 @@ namespace ResaleTelegramBot.Persistence.DbContexts;
 
 using Core.Models;
 using Microsoft.EntityFrameworkCore;
+using Seeders;
 
 public sealed class ApplicationDbContext : DbContext
 {
@@ -20,5 +21,7 @@ public sealed class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
+
+        modelBuilder.SeedCategoryData();
     }
 }
