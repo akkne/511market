@@ -53,16 +53,18 @@ public class AddListingScene : IScene
             },
             cancellationToken);
 
-        context.CurrentStep = AddListingSceneSteps.CategoryChoosing;
-
-        await _storage.SaveSceneContextAsync(userId, SceneName, context, cancellationToken);
-
         List<Category> categories = await _categoryService.GetCategoriesAsync(cancellationToken);
         InlineKeyboardMarkup keyboardMarkup =
             _callbackKeyboardGenerator.GenerateOnChoosingCategoryOnAddingListing(categories);
 
-        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnCategoryChoosingOnAddingListing,
+        Message message = await bot.SendMessage(context.UserId,
+            ResponseMessageStaticTexts.OnCategoryChoosingOnAddingListing,
             ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
+
+        context.CurrentStep = AddListingSceneSteps.CategoryChoosing;
+        context.LastMessageId = message.MessageId;
+
+        await _storage.SaveSceneContextAsync(userId, SceneName, context, cancellationToken);
     }
 
     public async Task HandleMessageAsync(long userId, Message message, ITelegramBotClient bot,
@@ -149,8 +151,8 @@ public class AddListingScene : IScene
         context.CategoryId = categoryGuid;
         await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
 
-        await bot.SendMessage(context.UserId, ResponseMessageStaticTexts.OnNameEntering, ParseMode.Html,
-            cancellationToken: cancellationToken);
+        await bot.EditMessageText(context.UserId, context.LastMessageId, ResponseMessageStaticTexts.OnNameEntering,
+            ParseMode.Html, InlineKeyboardMarkup.Empty(), cancellationToken: cancellationToken);
     }
 
     private async Task HandleAddListingConfirmationAsync(AddListingSceneContext context, Match match,
