@@ -1,17 +1,16 @@
 namespace ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Callback.Implementation;
 
 using System.Text.RegularExpressions;
+using Abstract;
+using Core.Models;
 using global::Telegram.Bot;
 using global::Telegram.Bot.Types;
 using global::Telegram.Bot.Types.Enums;
-using global::Telegram.Bot.Types.ReplyMarkups;
-using ResaleTelegramBot.Core.Models;
+using Helpers.Abstract;
+using Helpers.Shared.Enums;
 using ResaleTelegramBot.Services.Abstract;
-using ResaleTelegramBot.Telegram.Helpers.Abstract;
-using ResaleTelegramBot.Telegram.Helpers.Shared.Enums;
-using ResaleTelegramBot.Telegram.Services.Abstract;
-using ResaleTelegramBot.Telegram.Texts.Output;
-using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Callback.Abstract;
+using Services.Abstract;
+using Texts.Output;
 
 public class SearchByCategoryCallbackHandler : ICallbackHandler
 {
@@ -42,8 +41,7 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
 
         string data = callbackQuery.Data;
 
-        return _callbackGenerator.GetCallbackRegexOnSearchByCategory().IsMatch(data) ||
-               _callbackGenerator.GetCallbackRegexOnSelectCategoryForSearch().IsMatch(data) ||
+        return _callbackGenerator.GetCallbackRegexOnSelectCategoryForSearch().IsMatch(data) ||
                _callbackGenerator.GetCallbackRegexOnViewListing().IsMatch(data);
     }
 
@@ -54,12 +52,6 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
 
         string data = callbackQuery.Data;
 
-        if (_callbackGenerator.GetCallbackRegexOnSearchByCategory().IsMatch(data))
-        {
-            await HandleSearchByCategoryAsync(callbackQuery, botClient, cancellationToken);
-            return;
-        }
-
         if (_callbackGenerator.GetCallbackRegexOnSelectCategoryForSearch().IsMatch(data))
         {
             await HandleSelectCategoryForSearchAsync(callbackQuery, botClient, cancellationToken);
@@ -69,18 +61,6 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
 
         if (_callbackGenerator.GetCallbackRegexOnViewListing().IsMatch(data))
             await HandleViewListingAsync(callbackQuery, botClient, cancellationToken);
-    }
-
-    private async Task HandleSearchByCategoryAsync(CallbackQuery callbackQuery, ITelegramBotClient botClient,
-                                                   CancellationToken cancellationToken)
-    {
-        List<Category> categories = await _categoryService.GetCategoriesAsync(cancellationToken);
-        InlineKeyboardMarkup keyboardMarkup =
-            _callbackKeyboardGenerator.GenerateOnCategorySelectionForSearch(categories);
-
-        await botClient.EditMessageText(callbackQuery.From.Id, callbackQuery.Message!.MessageId,
-            ResponseMessageStaticTexts.OnCategorySelectionForSearch, ParseMode.Html, keyboardMarkup,
-            cancellationToken: cancellationToken);
     }
 
 

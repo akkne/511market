@@ -119,6 +119,7 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.AddScoped<IRegularTextHandler, FindListingsRegularTextHandler>();
 
     services.AddScoped<ICallbackHandler, SearchByCategoryCallbackHandler>();
+    services.AddScoped<ICallbackHandler, SelectingSearchingOptionsCallbackHandler>();
 
     services.AddScoped<ICommandHandler, StartCommandHandler>();
 
