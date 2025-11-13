@@ -104,33 +104,22 @@ public class AddListingScene : IScene
     {
         if (callback.Data == null) return;
 
-        AddListingSceneContext? context =
-            await _storage.GetSceneContextAsync<AddListingSceneContext>(userId, SceneName, cancellationToken);
-        if (context == null) return;
+        string data = callback.Data;
 
-        Match addListingConfigurationMatch = _callbackGenerator.GetCallbackRegexOnConfirmListingPublication()
-                                                               .Match(callback.Data);
-
-        if (addListingConfigurationMatch.Success && context.CurrentStep == AddListingSceneSteps.Completed)
+        if (_callbackGenerator.GetCallbackRegexOnConfirmListingPublication().IsMatch(data))
         {
-            await HandleAddListingConfirmationAsync(context, addListingConfigurationMatch, bot, cancellationToken);
+            await HandleAddListingConfirmationAsync(userId, callback, bot, cancellationToken);
             return;
         }
 
-        Match addCategoryOnAddListingConfigurationMatch = _callbackGenerator
-                                                         .GetCallbackRegexOnChoosingCategoryOnAddingListing()
-                                                         .Match(callback.Data);
+        if (_callbackGenerator.GetCallbackRegexOnChoosingCategoryOnAddingListing().IsMatch(data))
+        {
+            await HandleChooseCategoryAddListingConfirmationAsync(userId, callback, bot, cancellationToken);
+            return;
+        }
 
-        if (addCategoryOnAddListingConfigurationMatch.Success &&
-            context.CurrentStep == AddListingSceneSteps.CategoryChoosing)
-            await HandleChooseCategoryAddListingConfirmationAsync(context, addCategoryOnAddListingConfigurationMatch,
-                bot, cancellationToken);
-
-        Match finishPhotoUploadingMatch = _callbackGenerator.GetCallbackRegexOnFinishPhotoUploading()
-                                                            .Match(callback.Data);
-
-        if (finishPhotoUploadingMatch.Success && context.CurrentStep == AddListingSceneSteps.PhotoUploading)
-            await HandleFinishPhotoUploadingAsync(context, bot, cancellationToken);
+        if (_callbackGenerator.GetCallbackRegexOnFinishPhotoUploading().IsMatch(data))
+            await HandleFinishPhotoUploadingAsync(userId, callback, bot, cancellationToken);
     }
 
     public Task ExitAsync(long userId, ITelegramBotClient bot, CancellationToken cancellationToken)
@@ -139,10 +128,29 @@ public class AddListingScene : IScene
         return Task.CompletedTask;
     }
 
-    private async Task HandleChooseCategoryAddListingConfirmationAsync(AddListingSceneContext context, Match match,
+    private async Task HandleChooseCategoryAddListingConfirmationAsync(long userId, CallbackQuery callback,
                                                                        ITelegramBotClient bot,
                                                                        CancellationToken cancellationToken)
     {
+        if (callback.Data == null) return;
+
+        AddListingSceneContext? context =
+            await _storage.GetSceneContextAsync<AddListingSceneContext>(userId, SceneName, cancellationToken);
+        if (context == null)
+        {
+            _logger.LogWarning("Scene context not found for user {UserId}", userId);
+            return;
+        }
+
+        if (context.CurrentStep != AddListingSceneSteps.CategoryChoosing)
+        {
+            _logger.LogWarning("Invalid step {Step} for category selection", context.CurrentStep);
+            return;
+        }
+
+        Match match = _callbackGenerator.GetCallbackRegexOnChoosingCategoryOnAddingListing().Match(callback.Data);
+        if (!match.Success) return;
+
         string stringGuid = match.Groups[CallbackGenerationStaticStrings.CategoryId].Value;
         if (!Guid.TryParse(stringGuid, out Guid categoryGuid))
         {
@@ -165,9 +173,25 @@ public class AddListingScene : IScene
             ParseMode.Html, InlineKeyboardMarkup.Empty(), cancellationToken: cancellationToken);
     }
 
-    private async Task HandleAddListingConfirmationAsync(AddListingSceneContext context, Match match,
-                                                         ITelegramBotClient bot, CancellationToken cancellationToken)
+    private async Task HandleAddListingConfirmationAsync(long userId, CallbackQuery callback, ITelegramBotClient bot,
+                                                         CancellationToken cancellationToken)
     {
+        if (callback.Data == null) return;
+
+        AddListingSceneContext? context =
+            await _storage.GetSceneContextAsync<AddListingSceneContext>(userId, SceneName, cancellationToken);
+        if (context == null)
+        {
+            _logger.LogWarning("Scene context not found for user {UserId}", userId);
+            return;
+        }
+
+        if (context.CurrentStep != AddListingSceneSteps.Completed)
+        {
+            _logger.LogWarning("Invalid step {Step} for listing confirmation", context.CurrentStep);
+            return;
+        }
+
         List<ListingPhotosModel> photos = context.Photos
                                                  .Select((fileId, index) => new ListingPhotosModel
                                                   {
@@ -304,9 +328,23 @@ public class AddListingScene : IScene
         await _storage.SaveSceneContextAsync(context.UserId, SceneName, context, cancellationToken);
     }
 
-    private async Task HandleFinishPhotoUploadingAsync(AddListingSceneContext context, ITelegramBotClient bot,
+    private async Task HandleFinishPhotoUploadingAsync(long userId, CallbackQuery callback, ITelegramBotClient bot,
                                                        CancellationToken cancellationToken)
     {
+        AddListingSceneContext? context =
+            await _storage.GetSceneContextAsync<AddListingSceneContext>(userId, SceneName, cancellationToken);
+        if (context == null)
+        {
+            _logger.LogWarning("Scene context not found for user {UserId}", userId);
+            return;
+        }
+
+        if (context.CurrentStep != AddListingSceneSteps.PhotoUploading)
+        {
+            _logger.LogWarning("Invalid step {Step} for finishing photo uploading", context.CurrentStep);
+            return;
+        }
+
         InlineKeyboardMarkup keyboardMarkup =
             _callbackKeyboardGenerator.GenerateOnConfirmListingPublication();
 
