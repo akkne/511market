@@ -37,4 +37,17 @@ public class RegularTextStaticTexts
     public static string Settings = """
                                     ⚙️ Настройки
                                     """;
+
+    public static string[] All =
+    [
+        MainMenu,
+        FindListings,
+        FindByText,
+        Categories,
+        ChooseCity,
+        AddListing,
+        Favorite,
+        MyProfile,
+        Settings
+    ];
 }

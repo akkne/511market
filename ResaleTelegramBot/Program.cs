@@ -15,9 +15,13 @@ using ResaleTelegramBot.Telegram.Scenes.Managers.Abstract;
 using ResaleTelegramBot.Telegram.Scenes.Managers.Implementation;
 using ResaleTelegramBot.Telegram.Scenes.Scenes.Abstract;
 using ResaleTelegramBot.Telegram.Scenes.Scenes.Implementation;
+using ResaleTelegramBot.Telegram.Services.Abstract;
+using ResaleTelegramBot.Telegram.Services.Implementation;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Abstract;
 using ResaleTelegramBot.Telegram.UpdatesHandling.BaseHandlers.RouterServices.Implementation;
+using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Callback.Abstract;
+using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Callback.Implementation;
 using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Command.Abstract;
 using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.Command.Implementation;
 using ResaleTelegramBot.Telegram.UpdatesHandling.Handlers.RegularText.Abstract;
@@ -75,6 +79,8 @@ void ConfigureServices(IServiceCollection services, IConfiguration configuration
     services.AddScoped<IAuthService, AuthService>();
     services.AddScoped<IListingService, ListingService>();
     services.AddScoped<ICategoryService, CategoryService>();
+    services.AddScoped<IFavoriteService, FavoriteService>();
+    services.AddScoped<IListingSearchService, ListingSearchService>();
 
     services.AddSingleton<ISceneStorage, RedisSceneStorage>();
 
@@ -110,6 +116,9 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
     services.AddScoped<IRegularTextRouterService, RegularTextRouterService>();
 
     services.AddScoped<IRegularTextHandler, AddListingRegularTextHandler>();
+    services.AddScoped<IRegularTextHandler, FindListingsRegularTextHandler>();
+
+    services.AddScoped<ICallbackHandler, SearchByCategoryCallbackHandler>();
 
     services.AddScoped<ICommandHandler, StartCommandHandler>();
 
@@ -123,4 +132,6 @@ void ConfigureTelegramServices(IServiceCollection services, IConfiguration confi
 
     services.AddTransient<ICallbackKeyboardGenerator, CallbackKeyboardGenerator>();
     services.AddTransient<ICallbackGenerator, CallbackGenerator>();
+
+    services.AddScoped<IListingViewService, ListingViewService>();
 }

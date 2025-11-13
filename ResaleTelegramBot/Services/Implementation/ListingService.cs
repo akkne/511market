@@ -3,6 +3,7 @@ namespace ResaleTelegramBot.Services.Implementation;
 using Abstract;
 using Contracts.Listing;
 using Core.Models;
+using Core.Shared.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Persistence.DbContexts;
@@ -51,5 +52,45 @@ public class ListingService : IListingService
             _logger.LogError(exception, "Failed to create user");
             return false;
         }
+    }
+
+    public async Task<Listing?> GetListingByIdAsync(Guid listingId, CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Listings
+                               .Include(x => x.Category)
+                               .Include(x => x.Photos.OrderBy(p => p.Order))
+                               .Include(x => x.SellerProfile)
+                               .ThenInclude(x => x.UserProfile)
+                               .Include(x => x.FavoritedBy)
+                               .FirstOrDefaultAsync(x => x.Id == listingId, cancellationToken);
+    }
+
+    public async Task<List<Listing>> GetListingsByCategoryAsync(Guid categoryId,
+                                                                CancellationToken cancellationToken = default)
+    {
+        return await _dbContext.Listings
+                               .Include(x => x.Category)
+                               .Include(x => x.Photos.OrderBy(p => p.Order))
+                               .Include(x => x.SellerProfile)
+                               .ThenInclude(x => x.UserProfile)
+                               .Where(x => x.Category.Id == categoryId && x.Status == ListingStatus.Active)
+                               .OrderByDescending(x => x.CreatedAt)
+                               .ToListAsync(cancellationToken);
+    }
+
+    public async Task<List<Listing>> GetListingsByTextAsync(string searchText,
+                                                            CancellationToken cancellationToken = default)
+    {
+        string lowerSearchText = searchText.ToLower();
+        return await _dbContext.Listings
+                               .Include(x => x.Category)
+                               .Include(x => x.Photos.OrderBy(p => p.Order))
+                               .Include(x => x.SellerProfile)
+                               .ThenInclude(x => x.UserProfile)
+                               .Where(x => x.Status == ListingStatus.Active &&
+                                           (x.Title.ToLower().Contains(lowerSearchText) ||
+                                            x.Description.ToLower().Contains(lowerSearchText)))
+                               .OrderByDescending(x => x.CreatedAt)
+                               .ToListAsync(cancellationToken);
     }
 }

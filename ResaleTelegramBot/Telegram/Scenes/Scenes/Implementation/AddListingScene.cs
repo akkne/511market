@@ -12,9 +12,9 @@ using global::Telegram.Bot.Types.ReplyMarkups;
 using Helpers.Abstract;
 using Helpers.Shared.Enums;
 using Persistence.Scenes.Abstract;
-using Services.Abstract;
-using Services.Contracts.Listing;
-using Services.Contracts.Listing.Models;
+using ResaleTelegramBot.Services.Abstract;
+using ResaleTelegramBot.Services.Contracts.Listing;
+using ResaleTelegramBot.Services.Contracts.Listing.Models;
 using Shared;
 using Texts.Output;
 

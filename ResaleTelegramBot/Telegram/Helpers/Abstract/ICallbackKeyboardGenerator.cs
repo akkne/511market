@@ -8,4 +8,9 @@ public interface ICallbackKeyboardGenerator
     InlineKeyboardMarkup GenerateOnConfirmListingPublication();
     InlineKeyboardMarkup GenerateOnChoosingCategoryOnAddingListing(List<Category> categories);
     InlineKeyboardMarkup GenerateOnFinishPhotoUploading();
+    InlineKeyboardMarkup GenerateOnSearchTypeSelection();
+    InlineKeyboardMarkup GenerateOnCategorySelectionForSearch(List<Category> categories);
+
+    InlineKeyboardMarkup GenerateOnShortListingCard(Listing listing, int listingIndex, int totalListings,
+                                                    Guid? categoryId, string searchText);
 }
