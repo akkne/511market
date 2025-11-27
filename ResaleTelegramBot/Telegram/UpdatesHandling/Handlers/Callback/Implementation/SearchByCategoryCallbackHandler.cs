@@ -77,7 +77,7 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
         string listingIndexString = match.Groups[CallbackGenerationStaticStrings.ListingIndex].Value;
         string totalListingsString = match.Groups[CallbackGenerationStaticStrings.TotalListings].Value;
 
-        if (!int.TryParse(listingIndexString, out int listingIndex) ||
+        if (!int.TryParse(listingIndexString, out int startIndex) ||
             !int.TryParse(totalListingsString, out int totalListings))
         {
             _logger.LogWarning("Invalid listing index or total listings");
@@ -86,18 +86,20 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
 
         Guid? categoryId = categoryIdString == "null" ? null : Guid.Parse(categoryIdString);
 
-        List<Listing> listings =
+        List<Listing> allListings =
             await _listingSearchService.GetListingsAsync(categoryId, searchText, cancellationToken);
 
-        if (listings.Count == 0 || listingIndex < 1 || listingIndex > listings.Count)
+        if (allListings.Count == 0 || startIndex < 1 || startIndex > allListings.Count)
         {
             _logger.LogWarning("Invalid listing index or no listings found");
             return;
         }
 
-        Listing listing = listings[listingIndex - 1];
-        await _listingViewService.ShowListingAsync(callbackQuery.From.Id, callbackQuery.Message!.MessageId, listing,
-            listingIndex, totalListings, categoryId, searchText, botClient, cancellationToken);
+        int listingsToShow = Math.Min(4, allListings.Count - startIndex + 1);
+        List<Listing> listingsToDisplay = allListings.GetRange(startIndex - 1, listingsToShow);
+
+        await _listingViewService.ShowShortListingAsync(callbackQuery.From.Id, callbackQuery.Message!.MessageId,
+            listingsToDisplay, startIndex, totalListings, categoryId, searchText, botClient, cancellationToken);
     }
 
     private async Task HandleSelectCategoryForSearchAsync(CallbackQuery callbackQuery, ITelegramBotClient botClient,
@@ -115,19 +117,21 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
             return;
         }
 
-        List<Listing> listings =
+        List<Listing> allListings =
             await _listingSearchService.GetListingsAsync(categoryGuid, string.Empty, cancellationToken);
 
-        if (listings.Count == 0)
+        if (allListings.Count == 0)
         {
             await botClient.EditMessageText(callbackQuery.From.Id, callbackQuery.Message!.MessageId,
-                ResponseMessageStaticTexts.OnNoListingsFound, ParseMode.Html,
+                ResponseMessageStaticTexts.OnNoListingsFound, ParseMode.Html, null,
                 cancellationToken: cancellationToken);
             return;
         }
 
-        Listing listing = listings[0];
-        await _listingViewService.ShowListingAsync(callbackQuery.From.Id, callbackQuery.Message!.MessageId, listing,
-            1, listings.Count, categoryGuid, string.Empty, botClient, cancellationToken);
+        int listingsToShow = Math.Min(4, allListings.Count);
+        List<Listing> listingsToDisplay = allListings.GetRange(0, listingsToShow);
+
+        await _listingViewService.ShowShortListingAsync(callbackQuery.From.Id, callbackQuery.Message!.MessageId,
+            listingsToDisplay, 1, allListings.Count, categoryGuid, string.Empty, botClient, cancellationToken);
     }
 }

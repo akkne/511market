@@ -30,4 +30,9 @@ public interface ICallbackGenerator
 
     Regex GetCallbackRegexOnReportListing();
     string GenerateCallbackRegexOnReportListing(Guid listingId);
+
+    Regex GetCallbackRegexOnViewLongListing();
+
+    string GenerateCallbackRegexOnViewLongListing(Guid listingId, string searchText, int startIndex,
+                                                  int totalListings);
 }
