@@ -4,6 +4,13 @@ using Telegram.Scenes.Contexts.Abstract;
 
 public interface ISceneStorage
 {
+    Task<TContext> CreateSceneContextAsync<TContext>(
+        long userId,
+        string sceneName,
+        Func<TContext> factory,
+        CancellationToken cancellationToken)
+        where TContext : BaseSceneContext;
+
     Task<TContext?> GetSceneContextAsync<TContext>(long userId, string sceneName, CancellationToken cancellationToken)
         where TContext : BaseSceneContext;
 

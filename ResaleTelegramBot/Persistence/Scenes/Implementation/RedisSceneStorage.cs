@@ -45,6 +45,23 @@ public class RedisSceneStorage : ISceneStorage
         }
     }
 
+    public async Task<TContext> CreateSceneContextAsync<TContext>(
+        long userId,
+        string sceneName,
+        Func<TContext> factory,
+        CancellationToken cancellationToken)
+        where TContext : BaseSceneContext
+    {
+        TContext context = factory();
+        context.UserId = userId;
+        context.SceneName = sceneName;
+        context.CreatedAt = DateTime.UtcNow;
+        context.UpdatedAt = DateTime.UtcNow;
+
+        await SaveSceneContextAsync(userId, sceneName, context, cancellationToken).ConfigureAwait(false);
+        return context;
+    }
+
     public async Task<TContext> GetOrCreateSceneContextAsync<TContext>(
         long userId,
         string sceneName,
@@ -79,12 +96,8 @@ public class RedisSceneStorage : ISceneStorage
         await _redisDatabase.StringSetAsync(key, json);
         await _redisDatabase.KeyExpireAsync(key, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
 
-        bool ok = await _redisDatabase.SetAddAsync(indexKey, sceneName);
+        await _redisDatabase.SetAddAsync(indexKey, sceneName);
         await _redisDatabase.KeyExpireAsync(indexKey, TimeSpan.FromSeconds(_redisSceneStorageConfiguration.TtlSeconds));
-
-        if (!ok)
-            _logger.LogWarning("Redis transaction failed when saving context for user {UserId}, scene {SceneName}",
-                userId, sceneName);
     }
 
     public async Task RemoveSceneContextAsync(long userId, string sceneName, CancellationToken cancellationToken)
