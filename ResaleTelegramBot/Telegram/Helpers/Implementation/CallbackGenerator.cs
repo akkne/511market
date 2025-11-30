@@ -69,7 +69,7 @@ public class CallbackGenerator : ICallbackGenerator
     public Regex GetCallbackRegexOnViewListing()
     {
         return new Regex(
-            $"search/listing/(?<{CallbackGenerationStaticStrings.CategoryId}>[^/]+)/(?<{CallbackGenerationStaticStrings.SearchText}>[^/]+)/(?<{CallbackGenerationStaticStrings.ListingIndex}>\\d+)/(?<{CallbackGenerationStaticStrings.TotalListings}>\\d+)");
+            $"search/listing/(?<{CallbackGenerationStaticStrings.CategoryId}>[^/]+)/(?<{CallbackGenerationStaticStrings.SearchText}>[^/]*)/(?<{CallbackGenerationStaticStrings.ListingIndex}>\\d+)/(?<{CallbackGenerationStaticStrings.TotalListings}>\\d+)");
     }
 
     public string GenerateCallbackRegexOnViewListing(Guid? categoryId, string searchText, int listingIndex,
