@@ -82,12 +82,12 @@ public class CallbackGenerator : ICallbackGenerator
 
     public Regex GetCallbackRegexOnToggleFavorite()
     {
-        return new Regex($"search/favorite/(?<{CallbackGenerationStaticStrings.ListingId}>.+)");
+        return new Regex($"favorite/toggle/(?<{CallbackGenerationStaticStrings.ListingId}>[^/]+)/(?<messageId>\\d+)");
     }
 
-    public string GenerateCallbackRegexOnToggleFavorite(Guid listingId)
+    public string GenerateCallbackRegexOnToggleFavorite(Guid listingId, int messageId)
     {
-        return $"search/favorite/{listingId}";
+        return $"favorite/toggle/{listingId}/{messageId}";
     }
 
     public Regex GetCallbackRegexOnReportListing()

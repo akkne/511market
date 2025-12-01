@@ -18,6 +18,7 @@ using Texts.Output;
 public class SearchByCategoryCallbackHandler : ICallbackHandler
 {
     private readonly ICallbackGenerator _callbackGenerator;
+    private readonly IFavoriteService _favoriteService;
     private readonly IListingSearchService _listingSearchService;
     private readonly IListingService _listingService;
     private readonly IListingViewService _listingViewService;
@@ -28,13 +29,14 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
                                            ICallbackGenerator callbackGenerator,
                                            IListingSearchService listingSearchService,
                                            IListingService listingService, IListingViewService listingViewService,
-                                           ISceneStorage sceneStorage)
+                                           IFavoriteService favoriteService, ISceneStorage sceneStorage)
     {
         _logger = logger;
         _callbackGenerator = callbackGenerator;
         _listingSearchService = listingSearchService;
         _listingService = listingService;
         _listingViewService = listingViewService;
+        _favoriteService = favoriteService;
         _sceneStorage = sceneStorage;
     }
 
@@ -272,6 +274,8 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
             return;
         }
 
+        bool isFavorite = await _favoriteService.IsFavoriteAsync(callbackQuery.From.Id, listingId, cancellationToken);
+
         _logger.LogInformation("Showing long listing {ListingId} for user {UserId}", listingId, callbackQuery.From.Id);
 
         try
@@ -279,6 +283,7 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
             await _listingViewService.ShowLongListingAsync(
                 callbackQuery.From.Id,
                 listing,
+                isFavorite,
                 botClient,
                 cancellationToken);
 

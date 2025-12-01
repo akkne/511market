@@ -15,7 +15,7 @@ public class CallbackKeyboardStaticTexts
                                           """;
 
     public static string RemoveFromFavorites = """
-                                               ⭐ Убрать из избранного
+                                               ⭐ Удалить из избранного
                                                """;
 
     public static string SearchByCategory = """

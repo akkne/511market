@@ -26,7 +26,7 @@ public interface ICallbackGenerator
     string GenerateCallbackRegexOnViewListing(Guid? categoryId, string searchText, int listingIndex, int totalListings);
 
     Regex GetCallbackRegexOnToggleFavorite();
-    string GenerateCallbackRegexOnToggleFavorite(Guid listingId);
+    string GenerateCallbackRegexOnToggleFavorite(Guid listingId, int messageId);
 
     Regex GetCallbackRegexOnReportListing();
     string GenerateCallbackRegexOnReportListing(Guid listingId);

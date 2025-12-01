@@ -12,6 +12,9 @@ public interface IListingViewService
                                                   string searchText, ITelegramBotClient botClient,
                                                   CancellationToken cancellationToken);
 
-    Task ShowLongListingAsync(long userId, Listing listing, ITelegramBotClient botClient,
-                              CancellationToken cancellationToken);
+    Task ShowLongListingAsync(long userId, Listing listing, bool isFavorite,
+                              ITelegramBotClient botClient, CancellationToken cancellationToken);
+
+    Task UpdateLongListingMessageAsync(long userId, int messageId, Listing listing, bool isFavorite,
+                                       ITelegramBotClient botClient, CancellationToken cancellationToken);
 }

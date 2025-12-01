@@ -9,17 +9,21 @@ using global::Telegram.Bot.Types.Enums;
 using global::Telegram.Bot.Types.ReplyMarkups;
 using Helpers.Abstract;
 using Models;
+using Texts.Input;
 
 public class ListingViewService : IListingViewService
 {
+    private readonly ICallbackGenerator _callbackGenerator;
     private readonly ICallbackKeyboardGenerator _callbackKeyboardGenerator;
     private readonly ILogger<ListingViewService> _logger;
 
     public ListingViewService(ILogger<ListingViewService> logger,
-                              ICallbackKeyboardGenerator callbackKeyboardGenerator)
+                              ICallbackKeyboardGenerator callbackKeyboardGenerator,
+                              ICallbackGenerator callbackGenerator)
     {
         _logger = logger;
         _callbackKeyboardGenerator = callbackKeyboardGenerator;
+        _callbackGenerator = callbackGenerator;
     }
 
     public async Task<ListingViewResult> ShowShortListingAsync(long userId, List<int>? mediaGroupMessageIdList,
@@ -80,33 +84,109 @@ public class ListingViewService : IListingViewService
             cardText, buttonsText, keyboardMarkup, botClient, cancellationToken);
     }
 
-    public async Task ShowLongListingAsync(long userId, Listing listing, ITelegramBotClient botClient,
-                                           CancellationToken cancellationToken)
+    public async Task ShowLongListingAsync(long userId, Listing listing, bool isFavorite,
+                                           ITelegramBotClient botClient, CancellationToken cancellationToken)
     {
-        string cardText = FormatLongListingCard(listing);
+        string cardText = FormatLongListingCard(listing, isFavorite);
         List<ListingPhoto> photos = listing.Photos.OrderBy(p => p.Order).ToList();
+
 
         switch (photos.Count)
         {
             case 0:
-                await botClient.SendMessage(userId, cardText, ParseMode.Html, cancellationToken: cancellationToken);
-                return;
+            {
+                Message sentMessage = await botClient.SendMessage(userId, cardText, ParseMode.Html,
+                    cancellationToken: cancellationToken);
+
+                InlineKeyboardMarkup keyboardMarkup =
+                    GenerateFavoriteKeyboard(listing.Id, sentMessage.MessageId, isFavorite);
+
+                await botClient.EditMessageReplyMarkup(userId, sentMessage.MessageId, keyboardMarkup,
+                    cancellationToken: cancellationToken);
+
+                break;
+            }
             case 1:
-                await botClient.SendPhoto(userId, new InputFileId(photos[0].TelegramFileId), cardText,
+            {
+                Message sentMessage = await botClient.SendPhoto(userId, new InputFileId(photos[0].TelegramFileId),
+                    cardText,
                     ParseMode.Html, cancellationToken: cancellationToken);
-                return;
+
+                InlineKeyboardMarkup keyboardMarkup =
+                    GenerateFavoriteKeyboard(listing.Id, sentMessage.MessageId, isFavorite);
+
+                await botClient.EditMessageReplyMarkup(userId, sentMessage.MessageId, keyboardMarkup,
+                    cancellationToken: cancellationToken);
+                break;
+            }
+            default:
+            {
+                List<InputMediaPhoto> mediaGroup = [];
+                mediaGroup.AddRange(photos.Select(photo => new InputMediaPhoto(photo.TelegramFileId)));
+
+                mediaGroup[0] = new InputMediaPhoto(photos[0].TelegramFileId)
+                {
+                    Caption = cardText,
+                    ParseMode = ParseMode.Html
+                };
+
+                Message[] sentMessages = await botClient.SendMediaGroup(userId, mediaGroup,
+                    cancellationToken: cancellationToken);
+
+                Message sentMessage = sentMessages.Length > 0
+                    ? sentMessages[0]
+                    : throw new InvalidOperationException("Failed to send media group");
+
+                InlineKeyboardMarkup keyboardMarkup =
+                    GenerateFavoriteKeyboard(listing.Id, sentMessage.MessageId, isFavorite);
+
+                await botClient.EditMessageReplyMarkup(userId, sentMessage.MessageId, keyboardMarkup,
+                    cancellationToken: cancellationToken);
+
+                break;
+            }
         }
+    }
 
-        List<InputMediaPhoto> mediaGroup = [];
-        mediaGroup.AddRange(photos.Select(photo => new InputMediaPhoto(photo.TelegramFileId)));
+    public async Task UpdateLongListingMessageAsync(long userId, int messageId, Listing listing, bool isFavorite,
+                                                    ITelegramBotClient botClient, CancellationToken cancellationToken)
+    {
+        string cardText = FormatLongListingCard(listing, isFavorite);
+        InlineKeyboardMarkup keyboardMarkup = GenerateFavoriteKeyboard(listing.Id, messageId, isFavorite);
 
-        mediaGroup[0] = new InputMediaPhoto(photos[0].TelegramFileId)
+        List<ListingPhoto> photos = listing.Photos.OrderBy(p => p.Order).ToList();
+
+        try
         {
-            Caption = cardText,
-            ParseMode = ParseMode.Html
-        };
+            if (photos.Count == 0)
+                await botClient.EditMessageText(userId, messageId, cardText, ParseMode.Html,
+                    keyboardMarkup, cancellationToken: cancellationToken);
+            else
+                await botClient.EditMessageCaption(userId, messageId, cardText, ParseMode.Html,
+                    keyboardMarkup, cancellationToken: cancellationToken);
+        }
+        catch (RequestException ex) when (ex.Message.Contains("message is not modified"))
+        {
+            _logger.LogInformation(
+                "Message content unchanged for user {UserId}, message {MessageId}, updating reply markup only",
+                userId, messageId);
 
-        await botClient.SendMediaGroup(userId, mediaGroup, cancellationToken: cancellationToken);
+            try
+            {
+                await botClient.EditMessageReplyMarkup(userId, messageId, keyboardMarkup,
+                    cancellationToken: cancellationToken);
+            }
+            catch (Exception replyMarkupEx)
+            {
+                _logger.LogWarning(replyMarkupEx,
+                    "Failed to update reply markup for message {MessageId} for user {UserId}",
+                    messageId, userId);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to update message {MessageId} for user {UserId}", messageId, userId);
+        }
     }
 
     private static string FormatListingsCard(List<Listing> listings, int startIndex, int totalListings)
@@ -127,11 +207,13 @@ public class ListingViewService : IListingViewService
         return string.Join("\n\n", listingTexts);
     }
 
-    private static string FormatLongListingCard(Listing listing)
+    private static string FormatLongListingCard(Listing listing, bool isFavorite)
     {
         string sellerInfo = listing.SellerProfile.UserProfile.TelegramData.Username != null
             ? $"@{listing.SellerProfile.UserProfile.TelegramData.Username}"
-            : $"ID: {listing.SellerProfile.UserProfile.TelegramData?.Id ?? 0}";
+            : $"ID: {listing.SellerProfile.UserProfile.TelegramData.Id}";
+
+        string favoriteText = isFavorite ? "\n\n⭐ Товар в избранном" : "";
 
         return $"""
                 <b>{listing.Title}</b>
@@ -145,8 +227,24 @@ public class ListingViewService : IListingViewService
                 📝 <b>Описание:</b>
                 {listing.Description}
 
-                📅 <b>Опубликовано:</b> {listing.CreatedAt:dd.MM.yyyy HH:mm}
+                📅 <b>Опубликовано:</b> {listing.CreatedAt:dd.MM.yyyy HH:mm}{favoriteText}
                 """;
+    }
+
+    private InlineKeyboardMarkup GenerateFavoriteKeyboard(Guid listingId, int? messageId, bool isFavorite)
+    {
+        if (!messageId.HasValue)
+            return new InlineKeyboardMarkup(Array.Empty<InlineKeyboardButton[]>());
+
+        string buttonText = isFavorite
+            ? CallbackKeyboardStaticTexts.RemoveFromFavorites
+            : CallbackKeyboardStaticTexts.AddToFavorites;
+
+        string callbackData = _callbackGenerator.GenerateCallbackRegexOnToggleFavorite(listingId, messageId.Value);
+
+        return new InlineKeyboardMarkup([
+            [new InlineKeyboardButton(buttonText) { CallbackData = callbackData }]
+        ]);
     }
 
     private static List<ListingPhoto> GetFirstPhotosFromListings(List<Listing> listings)
