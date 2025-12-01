@@ -22,7 +22,7 @@ public class ListingViewService : IListingViewService
         _callbackKeyboardGenerator = callbackKeyboardGenerator;
     }
 
-    public async Task<ListingViewResult> ShowShortListingAsync(long userId, int? mediaGroupMessageId,
+    public async Task<ListingViewResult> ShowShortListingAsync(long userId, List<int>? mediaGroupMessageIdList,
                                                                int? buttonsMessageId, List<Listing> listings,
                                                                int startIndex, int totalListings, Guid? categoryId,
                                                                string searchText, ITelegramBotClient botClient,
@@ -32,14 +32,14 @@ public class ListingViewService : IListingViewService
         {
             _logger.LogWarning("Empty listings list");
             return new ListingViewResult
-                { MediaGroupMessageId = mediaGroupMessageId, ButtonsMessageId = buttonsMessageId };
+                { MediaGroupMessageId = mediaGroupMessageIdList, ButtonsMessageId = buttonsMessageId };
         }
 
         if (startIndex < 1 || startIndex > totalListings)
         {
             _logger.LogWarning("Invalid start index: {Index}, total: {Total}", startIndex, totalListings);
             return new ListingViewResult
-                { MediaGroupMessageId = mediaGroupMessageId, ButtonsMessageId = buttonsMessageId };
+                { MediaGroupMessageId = mediaGroupMessageIdList, ButtonsMessageId = buttonsMessageId };
         }
 
         string cardText = FormatListingsCard(listings, startIndex, totalListings);
@@ -52,19 +52,18 @@ public class ListingViewService : IListingViewService
 
         if (photos.Count == 0)
         {
-            int? messageIdToEdit = buttonsMessageId ?? mediaGroupMessageId;
-            if (messageIdToEdit.HasValue)
+            if (buttonsMessageId.HasValue)
             {
                 try
                 {
-                    await botClient.EditMessageText(userId, messageIdToEdit.Value, cardText, ParseMode.Html,
+                    await botClient.EditMessageText(userId, buttonsMessageId.Value, cardText, ParseMode.Html,
                         keyboardMarkup, cancellationToken: cancellationToken);
-                    return new ListingViewResult { ButtonsMessageId = messageIdToEdit.Value };
+                    return new ListingViewResult { ButtonsMessageId = buttonsMessageId.Value };
                 }
                 catch (RequestException ex) when (ex.Message.Contains("message is not modified"))
                 {
                     _logger.LogInformation("Message content unchanged for user {UserId}, message {MessageId}", userId,
-                        messageIdToEdit.Value);
+                        buttonsMessageId.Value);
                 }
             }
             else
@@ -74,50 +73,10 @@ public class ListingViewService : IListingViewService
                 return new ListingViewResult { ButtonsMessageId = sentMessage.MessageId };
             }
 
-            return new ListingViewResult { ButtonsMessageId = messageIdToEdit.Value };
+            return new ListingViewResult { ButtonsMessageId = buttonsMessageId.Value };
         }
 
-        if (photos.Count == 1)
-        {
-            int? messageIdToEdit = mediaGroupMessageId ?? buttonsMessageId;
-            if (messageIdToEdit.HasValue)
-                try
-                {
-                    string photoFileId = photos[0].TelegramFileId;
-                    await botClient.EditMessageMedia(new ChatId(userId), messageIdToEdit.Value,
-                        new InputMediaPhoto(photoFileId)
-                        {
-                            Caption = cardText, ParseMode = ParseMode.Html
-                        }, keyboardMarkup, cancellationToken: cancellationToken);
-                    return new ListingViewResult { MediaGroupMessageId = messageIdToEdit.Value };
-                }
-                catch (RequestException ex) when (ex.Message.Contains("message is not modified"))
-                {
-                    _logger.LogInformation("Message content unchanged for user {UserId}, message {MessageId}", userId,
-                        messageIdToEdit.Value);
-                    return new ListingViewResult { MediaGroupMessageId = messageIdToEdit.Value };
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex,
-                        "Failed to edit message media for user {UserId}, message {MessageId}. Deleting and resending.",
-                        userId, messageIdToEdit.Value);
-                    try
-                    {
-                        await botClient.DeleteMessage(userId, messageIdToEdit.Value, cancellationToken);
-                    }
-                    catch
-                    {
-                        // Ignore delete errors
-                    }
-                }
-
-            Message sentPhoto = await botClient.SendPhoto(userId, photos[0].TelegramFileId, cardText,
-                ParseMode.Html, replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
-            return new ListingViewResult { MediaGroupMessageId = sentPhoto.MessageId };
-        }
-
-        return await SendOrUpdateMediaGroupWithButtonsAsync(userId, mediaGroupMessageId, buttonsMessageId, photos,
+        return await SendOrUpdateMediaGroupWithButtonsAsync(userId, mediaGroupMessageIdList, buttonsMessageId, photos,
             cardText, buttonsText, keyboardMarkup, botClient, cancellationToken);
     }
 
@@ -128,7 +87,7 @@ public class ListingViewService : IListingViewService
 
     private static string FormatListingsCard(List<Listing> listings, int startIndex, int totalListings)
     {
-        _ = totalListings; // Used for future formatting
+        _ = totalListings;
         List<string> listingTexts = [];
         for (int i = 0; i < listings.Count && i < 4; i++)
         {
@@ -147,18 +106,15 @@ public class ListingViewService : IListingViewService
     private static List<ListingPhoto> GetFirstPhotosFromListings(List<Listing> listings)
     {
         List<ListingPhoto> photos = [];
-        foreach (Listing listing in listings)
-        {
-            if (listing.Photos == null || listing.Photos.Count == 0) continue;
-
-            ListingPhoto? firstPhoto = listing.Photos.OrderBy(p => p.Order).FirstOrDefault();
-            if (firstPhoto != null) photos.Add(firstPhoto);
-        }
+        photos.AddRange(from listing in listings
+                        where listing.Photos.Count != 0
+                        select listing.Photos.OrderBy(p => p.Order).FirstOrDefault());
 
         return photos;
     }
 
-    private async Task<ListingViewResult> SendOrUpdateMediaGroupWithButtonsAsync(long userId, int? mediaGroupMessageId,
+    private async Task<ListingViewResult> SendOrUpdateMediaGroupWithButtonsAsync(
+        long userId, List<int>? mediaGroupMessageIdList,
         int? buttonsMessageId,
         List<ListingPhoto> photos,
         string caption, string buttonsText,
@@ -166,31 +122,48 @@ public class ListingViewService : IListingViewService
         ITelegramBotClient botClient,
         CancellationToken cancellationToken)
     {
-        int? newMediaGroupMessageId = null;
-        int? newButtonsMessageId = buttonsMessageId;
-
-        if (mediaGroupMessageId.HasValue)
-            try
-            {
-                await botClient.DeleteMessage(userId, mediaGroupMessageId.Value, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to delete old media group message {MessageId} for user {UserId}",
-                    mediaGroupMessageId.Value, userId);
-            }
-
-        List<IAlbumInputMedia> mediaGroup = [];
-        foreach (ListingPhoto photo in photos) mediaGroup.Add(new InputMediaPhoto(photo.TelegramFileId));
+        List<InputMediaPhoto> mediaGroup = [];
+        mediaGroup.AddRange(photos.Select(photo => new InputMediaPhoto(photo.TelegramFileId)));
 
         mediaGroup[0] = new InputMediaPhoto(photos[0].TelegramFileId)
         {
             Caption = caption, ParseMode = ParseMode.Html
         };
 
-        Message[] sentMessages =
-            await botClient.SendMediaGroup(userId, mediaGroup, cancellationToken: cancellationToken);
-        if (sentMessages.Length > 0) newMediaGroupMessageId = sentMessages[0].MessageId;
+        if (mediaGroupMessageIdList == null)
+        {
+            Message[] sentMessages =
+                await botClient.SendMediaGroup(userId, mediaGroup, cancellationToken: cancellationToken);
+            if (sentMessages.Length > 0)
+                mediaGroupMessageIdList = sentMessages.Select(x => x.MessageId).ToList();
+        }
+        else
+        {
+            List<Message> messageSend = [];
+            for (int i = 0; i < mediaGroupMessageIdList.Count; i++)
+                try
+                {
+                    if (i < mediaGroup.Count)
+                    {
+                        InputMediaPhoto media = mediaGroup[i];
+                        Message photoMessage = await botClient.EditMessageMedia(userId, mediaGroupMessageIdList[i],
+                            media,
+                            cancellationToken: cancellationToken);
+                        messageSend.Add(photoMessage);
+                    }
+                    else
+                    {
+                        await botClient.DeleteMessage(userId, mediaGroupMessageIdList[i], cancellationToken);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to edit/delete message with id: {messageId} in chat: {chatId}",
+                        mediaGroupMessageIdList[i], userId);
+                }
+
+            mediaGroupMessageIdList = messageSend.Select(x => x.MessageId).ToList();
+        }
 
         if (buttonsMessageId.HasValue)
         {
@@ -198,13 +171,11 @@ public class ListingViewService : IListingViewService
             {
                 await botClient.EditMessageText(userId, buttonsMessageId.Value, buttonsText, ParseMode.Html,
                     keyboardMarkup, cancellationToken: cancellationToken);
-                newButtonsMessageId = buttonsMessageId.Value;
             }
             catch (RequestException ex) when (ex.Message.Contains("message is not modified"))
             {
                 _logger.LogInformation("Buttons message unchanged for user {UserId}, message {MessageId}", userId,
                     buttonsMessageId.Value);
-                newButtonsMessageId = buttonsMessageId.Value;
             }
             catch (Exception ex)
             {
@@ -217,24 +188,24 @@ public class ListingViewService : IListingViewService
                 }
                 catch
                 {
-                    // Ignore delete errors
+                    _logger.LogInformation("Failed to edit message with id");
                 }
 
                 Message sentButtonsMessage = await botClient.SendMessage(userId, buttonsText, ParseMode.Html,
                     replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
-                newButtonsMessageId = sentButtonsMessage.MessageId;
+                buttonsMessageId = sentButtonsMessage.MessageId;
             }
         }
         else
         {
             Message sentButtonsMessage = await botClient.SendMessage(userId, buttonsText, ParseMode.Html,
                 replyMarkup: keyboardMarkup, cancellationToken: cancellationToken);
-            newButtonsMessageId = sentButtonsMessage.MessageId;
+            buttonsMessageId = sentButtonsMessage.MessageId;
         }
 
         return new ListingViewResult
         {
-            MediaGroupMessageId = newMediaGroupMessageId, ButtonsMessageId = newButtonsMessageId
+            MediaGroupMessageId = mediaGroupMessageIdList, ButtonsMessageId = buttonsMessageId
         };
     }
 }

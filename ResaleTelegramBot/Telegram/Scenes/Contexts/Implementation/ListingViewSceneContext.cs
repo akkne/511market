@@ -4,12 +4,15 @@ using Abstract;
 
 public class ListingViewSceneContext : BaseSceneContext
 {
-    public ListingViewSceneContext()
-    {
-        MediaGroupMessageId = 0;
-        ButtonsMessageId = 0;
-    }
+    public List<int>? MediaGroupMessageId { get; set; }
+    public int? ButtonsMessageId { get; set; }
 
-    public int MediaGroupMessageId { get; set; }
-    public int ButtonsMessageId { get; set; }
+    public static ListingViewSceneContext CreateEmpty()
+    {
+        return new ListingViewSceneContext
+        {
+            MediaGroupMessageId = null,
+            ButtonsMessageId = null
+        };
+    }
 }

@@ -53,19 +53,39 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
     public async Task HandleCallbackAsync(CallbackQuery callbackQuery, ITelegramBotClient botClient,
                                           CancellationToken cancellationToken)
     {
-        if (callbackQuery.Data == null) return;
-
-        string data = callbackQuery.Data;
-
-        if (_callbackGenerator.GetCallbackRegexOnSelectCategoryForSearch().IsMatch(data))
+        if (callbackQuery.Data == null)
         {
-            await HandleSelectCategoryForSearchAsync(callbackQuery, botClient, cancellationToken);
+            _logger.LogWarning("Callback data is null");
             return;
         }
 
+        string data = callbackQuery.Data;
+        _logger.LogInformation("SearchByCategoryCallbackHandler handling callback: {Data} for user {UserId}", data,
+            callbackQuery.From.Id);
 
-        if (_callbackGenerator.GetCallbackRegexOnViewListing().IsMatch(data))
-            await HandleViewListingAsync(callbackQuery, botClient, cancellationToken);
+        try
+        {
+            if (_callbackGenerator.GetCallbackRegexOnSelectCategoryForSearch().IsMatch(data))
+            {
+                _logger.LogInformation("Matched SelectCategoryForSearch pattern");
+                await HandleSelectCategoryForSearchAsync(callbackQuery, botClient, cancellationToken);
+                return;
+            }
+
+            if (_callbackGenerator.GetCallbackRegexOnViewListing().IsMatch(data))
+            {
+                _logger.LogInformation("Matched ViewListing pattern");
+                await HandleViewListingAsync(callbackQuery, botClient, cancellationToken);
+                return;
+            }
+
+            _logger.LogWarning("Callback data doesn't match any known pattern: {Data}", data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling callback for user {UserId}, data: {Data}",
+                callbackQuery.From.Id, data);
+        }
     }
 
 
@@ -90,6 +110,10 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
         string listingIndexString = match.Groups[CallbackGenerationStaticStrings.ListingIndex].Value;
         string totalListingsString = match.Groups[CallbackGenerationStaticStrings.TotalListings].Value;
 
+        _logger.LogInformation(
+            "Parsed callback data - CategoryId: {CategoryId}, SearchText: {SearchText}, Index: {Index}, Total: {Total}",
+            categoryIdString, searchText, listingIndexString, totalListingsString);
+
         if (!int.TryParse(listingIndexString, out int startIndex) ||
             !int.TryParse(totalListingsString, out int totalListings))
         {
@@ -99,18 +123,20 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
         }
 
         Guid? categoryId = null;
-        if (categoryIdString != "null" && Guid.TryParse(categoryIdString, out Guid parsedCategoryId))
+        if (Guid.TryParse(categoryIdString, out Guid parsedCategoryId))
         {
             categoryId = parsedCategoryId;
         }
         else if (categoryIdString != "null")
         {
-            _logger.LogWarning("Invalid category GUID format: {CategoryId}", categoryIdString);
-            return;
+            _logger.LogWarning("Invalid category GUID format: {CategoryId}. Treating as null.", categoryIdString);
+            categoryId = null;
         }
 
         List<Listing> allListings =
             await _listingSearchService.GetListingsAsync(categoryId, searchText, cancellationToken);
+
+        _logger.LogInformation("Found {Count} listings for user {UserId}", allListings.Count, callbackQuery.From.Id);
 
         if (allListings.Count == 0 || startIndex < 1 || startIndex > allListings.Count)
         {
@@ -122,30 +148,40 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
         int listingsToShow = Math.Min(4, allListings.Count - startIndex + 1);
         List<Listing> listingsToDisplay = allListings.GetRange(startIndex - 1, listingsToShow);
 
+        _logger.LogInformation("Displaying {Count} listings starting from index {StartIndex} for user {UserId}",
+            listingsToDisplay.Count, startIndex, callbackQuery.From.Id);
+
         ListingViewSceneContext context = await _sceneStorage.GetOrCreateSceneContextAsync(
             callbackQuery.From.Id,
             "ListingView",
-            () => new ListingViewSceneContext(),
+            ListingViewSceneContext.CreateEmpty,
             cancellationToken);
+
+        _logger.LogInformation("Context loaded - MediaGroupMessageId: {MediaId}, ButtonsMessageId: {ButtonsId}",
+            context.MediaGroupMessageId, context.ButtonsMessageId);
 
         try
         {
             ListingViewResult result = await _listingViewService.ShowShortListingAsync(
                 callbackQuery.From.Id,
-                context.MediaGroupMessageId == 0 ? null : context.MediaGroupMessageId,
-                context.ButtonsMessageId == 0 ? null : context.ButtonsMessageId,
+                context.MediaGroupMessageId,
+                context.ButtonsMessageId,
                 listingsToDisplay, startIndex, totalListings, categoryId, searchText, botClient, cancellationToken);
 
-            if (result.MediaGroupMessageId.HasValue) context.MediaGroupMessageId = result.MediaGroupMessageId.Value;
+            _logger.LogInformation("Service returned - MediaGroupMessageId: {MediaId}, ButtonsMessageId: {ButtonsId}",
+                result.MediaGroupMessageId, result.ButtonsMessageId);
+
+            context.MediaGroupMessageId = result.MediaGroupMessageId;
 
             if (result.ButtonsMessageId.HasValue) context.ButtonsMessageId = result.ButtonsMessageId.Value;
 
             await _sceneStorage.SaveSceneContextAsync(callbackQuery.From.Id, "ListingView", context, cancellationToken);
+
+            _logger.LogInformation("Successfully updated listing view for user {UserId}", callbackQuery.From.Id);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error handling view listing callback for user {UserId}", callbackQuery.From.Id);
-            throw;
         }
     }
 
@@ -181,16 +217,16 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
         ListingViewSceneContext context = await _sceneStorage.CreateSceneContextAsync(
             callbackQuery.From.Id,
             "ListingView",
-            () => new ListingViewSceneContext(),
+            ListingViewSceneContext.CreateEmpty,
             cancellationToken);
 
         ListingViewResult result = await _listingViewService.ShowShortListingAsync(
             callbackQuery.From.Id,
-            context.MediaGroupMessageId == 0 ? null : context.MediaGroupMessageId,
-            context.ButtonsMessageId == 0 ? null : context.ButtonsMessageId,
+            context.MediaGroupMessageId,
+            context.ButtonsMessageId,
             listingsToDisplay, 1, allListings.Count, categoryGuid, string.Empty, botClient, cancellationToken);
 
-        if (result.MediaGroupMessageId.HasValue) context.MediaGroupMessageId = result.MediaGroupMessageId.Value;
+        context.MediaGroupMessageId = result.MediaGroupMessageId;
 
         if (result.ButtonsMessageId.HasValue) context.ButtonsMessageId = result.ButtonsMessageId.Value;
 
