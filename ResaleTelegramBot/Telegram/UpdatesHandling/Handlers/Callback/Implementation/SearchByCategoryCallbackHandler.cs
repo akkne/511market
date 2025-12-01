@@ -18,24 +18,22 @@ using Texts.Output;
 public class SearchByCategoryCallbackHandler : ICallbackHandler
 {
     private readonly ICallbackGenerator _callbackGenerator;
-    private readonly ICallbackKeyboardGenerator _callbackKeyboardGenerator;
-    private readonly ICategoryService _categoryService;
     private readonly IListingSearchService _listingSearchService;
+    private readonly IListingService _listingService;
     private readonly IListingViewService _listingViewService;
     private readonly ILogger<SearchByCategoryCallbackHandler> _logger;
     private readonly ISceneStorage _sceneStorage;
 
     public SearchByCategoryCallbackHandler(ILogger<SearchByCategoryCallbackHandler> logger,
                                            ICallbackGenerator callbackGenerator,
-                                           ICallbackKeyboardGenerator callbackKeyboardGenerator,
-                                           ICategoryService categoryService, IListingSearchService listingSearchService,
-                                           IListingViewService listingViewService, ISceneStorage sceneStorage)
+                                           IListingSearchService listingSearchService,
+                                           IListingService listingService, IListingViewService listingViewService,
+                                           ISceneStorage sceneStorage)
     {
         _logger = logger;
         _callbackGenerator = callbackGenerator;
-        _callbackKeyboardGenerator = callbackKeyboardGenerator;
-        _categoryService = categoryService;
         _listingSearchService = listingSearchService;
+        _listingService = listingService;
         _listingViewService = listingViewService;
         _sceneStorage = sceneStorage;
     }
@@ -47,7 +45,8 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
         string data = callbackQuery.Data;
 
         return _callbackGenerator.GetCallbackRegexOnSelectCategoryForSearch().IsMatch(data) ||
-               _callbackGenerator.GetCallbackRegexOnViewListing().IsMatch(data);
+               _callbackGenerator.GetCallbackRegexOnViewListing().IsMatch(data) ||
+               _callbackGenerator.GetCallbackRegexOnViewLongListing().IsMatch(data);
     }
 
     public async Task HandleCallbackAsync(CallbackQuery callbackQuery, ITelegramBotClient botClient,
@@ -76,6 +75,13 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
             {
                 _logger.LogInformation("Matched ViewListing pattern");
                 await HandleViewListingAsync(callbackQuery, botClient, cancellationToken);
+                return;
+            }
+
+            if (_callbackGenerator.GetCallbackRegexOnViewLongListing().IsMatch(data))
+            {
+                _logger.LogInformation("Matched ViewLongListing pattern");
+                await HandleViewLongListingAsync(callbackQuery, botClient, cancellationToken);
                 return;
             }
 
@@ -231,5 +237,56 @@ public class SearchByCategoryCallbackHandler : ICallbackHandler
         if (result.ButtonsMessageId.HasValue) context.ButtonsMessageId = result.ButtonsMessageId.Value;
 
         await _sceneStorage.SaveSceneContextAsync(callbackQuery.From.Id, "ListingView", context, cancellationToken);
+    }
+
+    private async Task HandleViewLongListingAsync(CallbackQuery callbackQuery, ITelegramBotClient botClient,
+                                                  CancellationToken cancellationToken)
+    {
+        if (callbackQuery.Data == null)
+        {
+            _logger.LogWarning("Callback data is null");
+            return;
+        }
+
+        Match match = _callbackGenerator.GetCallbackRegexOnViewLongListing().Match(callbackQuery.Data);
+        if (!match.Success)
+        {
+            _logger.LogWarning("Callback data doesn't match view long listing pattern: {Data}", callbackQuery.Data);
+            return;
+        }
+
+        string listingIdString = match.Groups[CallbackGenerationStaticStrings.ListingId].Value;
+
+        _logger.LogInformation("Parsed long listing callback data - ListingId: {ListingId}", listingIdString);
+
+        if (!Guid.TryParse(listingIdString, out Guid listingId))
+        {
+            _logger.LogWarning("Invalid listing GUID format: {ListingId}", listingIdString);
+            return;
+        }
+
+        Listing? listing = await _listingService.GetListingByIdAsync(listingId, cancellationToken);
+        if (listing == null)
+        {
+            _logger.LogWarning("Listing not found with id: {ListingId}", listingId);
+            return;
+        }
+
+        _logger.LogInformation("Showing long listing {ListingId} for user {UserId}", listingId, callbackQuery.From.Id);
+
+        try
+        {
+            await _listingViewService.ShowLongListingAsync(
+                callbackQuery.From.Id,
+                listing,
+                botClient,
+                cancellationToken);
+
+            _logger.LogInformation("Successfully displayed long listing for user {UserId}", callbackQuery.From.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error showing long listing for user {UserId}", callbackQuery.From.Id);
+        }
     }
 }

@@ -11,4 +11,7 @@ public interface IListingViewService
                                                   int startIndex, int totalListings, Guid? categoryId,
                                                   string searchText, ITelegramBotClient botClient,
                                                   CancellationToken cancellationToken);
+
+    Task ShowLongListingAsync(long userId, Listing listing, ITelegramBotClient botClient,
+                              CancellationToken cancellationToken);
 }

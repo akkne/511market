@@ -80,9 +80,33 @@ public class ListingViewService : IListingViewService
             cardText, buttonsText, keyboardMarkup, botClient, cancellationToken);
     }
 
-    public Task ShowLongListingAsync()
+    public async Task ShowLongListingAsync(long userId, Listing listing, ITelegramBotClient botClient,
+                                           CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        string cardText = FormatLongListingCard(listing);
+        List<ListingPhoto> photos = listing.Photos.OrderBy(p => p.Order).ToList();
+
+        switch (photos.Count)
+        {
+            case 0:
+                await botClient.SendMessage(userId, cardText, ParseMode.Html, cancellationToken: cancellationToken);
+                return;
+            case 1:
+                await botClient.SendPhoto(userId, new InputFileId(photos[0].TelegramFileId), cardText,
+                    ParseMode.Html, cancellationToken: cancellationToken);
+                return;
+        }
+
+        List<InputMediaPhoto> mediaGroup = [];
+        mediaGroup.AddRange(photos.Select(photo => new InputMediaPhoto(photo.TelegramFileId)));
+
+        mediaGroup[0] = new InputMediaPhoto(photos[0].TelegramFileId)
+        {
+            Caption = cardText,
+            ParseMode = ParseMode.Html
+        };
+
+        await botClient.SendMediaGroup(userId, mediaGroup, cancellationToken: cancellationToken);
     }
 
     private static string FormatListingsCard(List<Listing> listings, int startIndex, int totalListings)
@@ -101,6 +125,28 @@ public class ListingViewService : IListingViewService
         }
 
         return string.Join("\n\n", listingTexts);
+    }
+
+    private static string FormatLongListingCard(Listing listing)
+    {
+        string sellerInfo = listing.SellerProfile.UserProfile.TelegramData.Username != null
+            ? $"@{listing.SellerProfile.UserProfile.TelegramData.Username}"
+            : $"ID: {listing.SellerProfile.UserProfile.TelegramData?.Id ?? 0}";
+
+        return $"""
+                <b>{listing.Title}</b>
+
+                💰 <b>Цена:</b> {listing.Price} ₽
+
+                📂 <b>Категория:</b> {listing.Category.Name}
+
+                👤 <b>Продавец:</b> {sellerInfo}
+
+                📝 <b>Описание:</b>
+                {listing.Description}
+
+                📅 <b>Опубликовано:</b> {listing.CreatedAt:dd.MM.yyyy HH:mm}
+                """;
     }
 
     private static List<ListingPhoto> GetFirstPhotosFromListings(List<Listing> listings)

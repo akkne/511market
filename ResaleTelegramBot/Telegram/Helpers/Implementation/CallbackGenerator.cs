@@ -102,14 +102,11 @@ public class CallbackGenerator : ICallbackGenerator
 
     public Regex GetCallbackRegexOnViewLongListing()
     {
-        return new Regex(
-            $"listing/long/(?<{CallbackGenerationStaticStrings.ListingId}>[^/]+)/(?<{CallbackGenerationStaticStrings.SearchText}>[^/]+)/(?<{CallbackGenerationStaticStrings.ListingIndex}>\\d+)/(?<{CallbackGenerationStaticStrings.TotalListings}>\\d+)");
+        return new Regex($"listing/long/(?<{CallbackGenerationStaticStrings.ListingId}>[^/]+)");
     }
 
-    public string GenerateCallbackRegexOnViewLongListing(Guid listingId, string searchText,
-                                                         int startIndex, int totalListings)
+    public string GenerateCallbackRegexOnViewLongListing(Guid listingId)
     {
-        string escapedSearchText = Uri.EscapeDataString(searchText);
-        return $"listing/long/{listingId}/{escapedSearchText}/{startIndex}/{totalListings}";
+        return $"listing/long/{listingId}";
     }
 }

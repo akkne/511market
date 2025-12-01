@@ -57,23 +57,20 @@ public class CallbackKeyboardGenerator : ICallbackKeyboardGenerator
 
     public InlineKeyboardMarkup GenerateOnSearchTypeSelection()
     {
-        return new InlineKeyboardMarkup(new[]
-        {
-            new[]
-            {
+        return new InlineKeyboardMarkup([
+            [
                 new InlineKeyboardButton(CallbackKeyboardStaticTexts.SearchByCategory)
                 {
                     CallbackData = _callbackGenerator.GenerateCallbackRegexOnSearchByCategory()
                 }
-            },
-            new[]
-            {
+            ],
+            [
                 new InlineKeyboardButton(CallbackKeyboardStaticTexts.SearchByText)
                 {
                     CallbackData = _callbackGenerator.GenerateCallbackRegexOnSearchByText()
                 }
-            }
-        });
+            ]
+        ]);
     }
 
     public InlineKeyboardMarkup GenerateOnCategorySelectionForSearch(List<Category> categories)
@@ -109,8 +106,7 @@ public class CallbackKeyboardGenerator : ICallbackKeyboardGenerator
             if (listing.Id == Guid.Empty) continue;
 
             int buttonNumber = i + 1;
-            string callbackData = _callbackGenerator.GenerateCallbackRegexOnViewLongListing(listing.Id,
-                searchText, startIndex, totalListings);
+            string callbackData = _callbackGenerator.GenerateCallbackRegexOnViewLongListing(listing.Id);
 
             if (callbackData.Length > 64)
             {
