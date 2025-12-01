@@ -6,7 +6,7 @@ using Models;
 
 public interface IListingViewService
 {
-    Task<ListingViewResult> ShowShortListingAsync(long userId, List<int> mediaGroupMessageIdList,
+    Task<ListingViewResult> ShowShortListingAsync(long userId, List<int>? mediaGroupMessageIdList,
                                                   int? buttonsMessageId, List<Listing> listings,
                                                   int startIndex, int totalListings, Guid? categoryId,
                                                   string searchText, ITelegramBotClient botClient,
